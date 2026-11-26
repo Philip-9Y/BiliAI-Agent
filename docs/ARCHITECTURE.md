@@ -96,7 +96,7 @@ Study-AI/
 │   ├── agent_pane.py          # 旧 Agent 任务页（新 UI 不用）
 │   └── answer_panel.py        # 旧浮动回答面板（新 UI 不用）
 ├── plugins/study_notes/       # 内置示例插件
-├── tests/                     # 53 项单元 + 流程测试
+├── tests/                     # 54 项单元 + 流程测试
 ├── assets/                    # 图标、截图
 ├── data/                      # 运行时数据（gitignore）
 ├── config.json                # 配置（gitignore，含 API Key）
@@ -367,9 +367,10 @@ ToolSpec(
 
 ### 6.8 core/memory.py：长期记忆
 
-- 检索：中文 bigram + 词重合度，取最相关 5 条；
-- `build_context(question)`：拼成提示词片段；
+- 检索：最近几轮问题 + 中文 bigram/词重合 + 字符余弦相似度，取最相关 5 条；
+- `build_context(question, context_text)`：拼成提示词片段，模糊追问也能利用上一轮问题；
 - `consolidate(session_ids)`：让 LLM 输出 JSON 记忆，与旧记忆相似合并；
+- `auto_memory`：每段对话达到 6 条消息后，后台自动整理一次（设置可关）；
 - 记忆默认启用，可手动停用/编辑/删除。
 
 关键词检索 ≠ 向量检索；当前没有 embedding。后续可以替换为向量库，但接口（`build_context`）不用变。

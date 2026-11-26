@@ -230,7 +230,7 @@ data/
 - `base_url`：`https://api.deepseek.com`
 - `model`：`deepseek-flash`
 - `max_tokens`（默认 4096，长回答会自动续写）、`temperature`
-- `save_captures`、`thinking`、`note_template`
+- `save_captures`、`thinking`、`auto_memory`、`note_template`
 - `hotkey_capture`、`pet_pos`、`pet_enabled`
 
 `config.example.json` 只保留空 Key 模板，可安全公开。

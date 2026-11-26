@@ -9,7 +9,9 @@ from __future__ import annotations
 import difflib
 import json
 import logging
+import math
 import re
+from collections import Counter
 
 from core.config import Config
 from core.llm import DeepSeekClient
@@ -48,21 +50,40 @@ class MemoryManager:
             grams.add(han[index] + han[index + 1])
         return grams
 
-    def retrieve(self, question: str, limit: int = 5) -> list[dict]:
-        question_grams = self._grams(question)
+    def retrieve(self, question: str, limit: int = 5, context_text: str = "") -> list[dict]:
+        # 追问（“这个为什么”“继续”）本身关键词很少，把最近几轮问题一起当检索 query
+        query = f"{question} {context_text}".strip()
+        question_grams = self._grams(query)
         if not question_grams:
             return []
-        scored: list[tuple[int, str, dict]] = []
+        scored: list[tuple[float, str, dict]] = []
         for memory in self.store.list_memories("", include_disabled=False):
             memory_grams = self._grams(memory["content"] + " " + memory["tags"])
             overlap = len(question_grams & memory_grams)
-            if overlap >= 1:
-                scored.append((overlap, memory["updated_at"], memory))
+            similarity = self._cosine(question_grams, memory_grams)
+            # 字符重合 + 余弦相似度混合；比单纯“命中一个词”更抗模糊表达
+            if overlap == 0 and similarity < 0.18:
+                continue
+            score = overlap * 2.0 + similarity * 4.0
+            scored.append((score, memory["updated_at"], memory))
         scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
         return [memory for _, _, memory in scored[:limit]]
 
-    def build_context(self, question: str) -> str:
-        memories = self.retrieve(question)
+    @staticmethod
+    def _cosine(left: set[str], right: set[str]) -> float:
+        if not left or not right:
+            return 0.0
+        left_counter = Counter(left)
+        right_counter = Counter(right)
+        dot = sum(count * right_counter.get(gram, 0) for gram, count in left_counter.items())
+        left_norm = math.sqrt(sum(count * count for count in left_counter.values()))
+        right_norm = math.sqrt(sum(count * count for count in right_counter.values()))
+        if not left_norm or not right_norm:
+            return 0.0
+        return dot / (left_norm * right_norm)
+
+    def build_context(self, question: str, context_text: str = "") -> str:
+        memories = self.retrieve(question, context_text=context_text)
         if not memories:
             return ""
         return "\n".join(f"- {memory['content']}" for memory in memories)

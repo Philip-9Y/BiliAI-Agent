@@ -64,6 +64,17 @@ class MemoryTest(unittest.TestCase):
 
         self.assertEqual(manager.retrieve("完全无关的问题"), [])
 
+    def test_fuzzy_followup_uses_prior_context(self) -> None:
+        self.store.add_memory("递归树时间复杂度用主定理分析", "算法")
+        manager = MemoryManager(self.store, self.config)
+        # “这个为什么”本身没有可检索关键词；带上上一轮问题后应能召回
+        self.assertEqual(manager.retrieve("这个为什么"), [])
+        results = manager.retrieve(
+            "这个为什么", context_text="递归树的时间复杂度怎么算"
+        )
+        self.assertEqual(len(results), 1)
+        self.assertIn("主定理", results[0]["content"])
+
     def test_consolidate_merges_similar(self) -> None:
         sid = self.store.create_session("递归树复杂度")
         self.store.add_message(sid, "user", "递归树复杂度怎么算")

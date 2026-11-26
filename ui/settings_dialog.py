@@ -105,6 +105,13 @@ class SettingsDialog(QDialog):
         )
         form.addRow("", self.thinking)
 
+        self.auto_memory = QCheckBox(
+            "自动整理长期记忆（每段对话达到 6 条消息后，后台提取一次）"
+        )
+        self.auto_memory.setChecked(bool(config.data.get("auto_memory", True)))
+        self.auto_memory.setToolTip("会额外调用一次模型，可能产生少量 token 费用；可随时关闭。")
+        form.addRow("", self.auto_memory)
+
         self.note_template = QTextEdit()
         self.note_template.setPlainText(config.note_template)
         self.note_template.setFixedHeight(130)
@@ -201,6 +208,7 @@ class SettingsDialog(QDialog):
         self.config.data["save_captures"] = bool(self.save_caps.isChecked())
         self.config.data["pet_enabled"] = bool(self.pet_enabled.isChecked())
         self.config.data["thinking"] = bool(self.thinking.isChecked())
+        self.config.data["auto_memory"] = bool(self.auto_memory.isChecked())
         self.config.data["note_template"] = self.note_template.toPlainText().strip()
         self.config.save()
         self.accept()

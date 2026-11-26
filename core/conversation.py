@@ -106,25 +106,24 @@ class ConversationAgent(QObject):
             api_key=self.config.api_key,
             base_url=self.config.base_url,
             model=self.config.model,
-            max_tokens=int(self.config.data.get("max_tokens", 1500)),
+            max_tokens=int(self.config.data.get("max_tokens", 4096)),
             temperature=float(self.config.data.get("temperature", 0.6)),
         )
 
     def _build_messages(self, sid: str) -> list[dict]:
         session = self.store.get_session(sid) or {}
         rows = self.store.get_messages(sid)
-        question = ""
-        for row in reversed(rows):
-            if row["role"] == "user":
-                question = row["content"]
-                break
+        user_texts = [row["content"] for row in rows if row["role"] == "user"]
+        question = user_texts[-1] if user_texts else ""
+        # 模糊追问（这个/刚才/继续）时，把最近几轮问题也作为记忆检索上下文
+        prior_questions = " ".join(user_texts[-3:-1])[:600]
 
         system = CHAT_SYSTEM_PROMPT
         context_text = (session.get("context") or "").strip()
         if context_text:
             system += "\n\n【当前屏幕上下文】\n" + context_text
         if self.memory is not None and question:
-            memory_text = self.memory.build_context(question)
+            memory_text = self.memory.build_context(question, prior_questions)
             if memory_text:
                 system += (
                     "\n\n【用户的长期记忆（可能相关，参考即可；无关就忽略）】\n" + memory_text

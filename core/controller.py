@@ -62,6 +62,8 @@ class Controller(QObject):
         self._pending_context = None
         self._restore_main = False
         self._consolidating = False
+        self._auto_memory_running = False
+        self._auto_memory_sessions: set[str] = set()
 
         self.main.capture_requested.connect(self.start_capture)
         self.main.settings_requested.connect(self.open_settings)
@@ -251,6 +253,46 @@ class Controller(QObject):
         self.main.refresh_history()
         self.main.refresh_notes()
         self.answer_finished.emit(sid)
+        self._maybe_auto_memory(sid)
+
+    def _maybe_auto_memory(self, sid: str) -> None:
+        """对话达到一定长度后，在后台自动提取一次长期记忆。"""
+        if not bool(self.config.data.get("auto_memory", True)):
+            return
+        if not self.config.api_key:
+            return
+        if self._consolidating or self._auto_memory_running:
+            return
+        if sid in self._auto_memory_sessions:
+            return
+        messages = self.store.get_messages(sid)
+        if len(messages) < 6:
+            return
+
+        self._auto_memory_sessions.add(sid)
+        self._auto_memory_running = True
+        self.memory_status.emit("正在自动整理长期记忆…")
+
+        def work() -> None:
+            try:
+                result = self.memory.consolidate([sid], max_sessions=1)
+                added = int(result.get("added") or 0)
+                merged = int(result.get("merged") or 0)
+                if added or merged:
+                    self.memory_status.emit(
+                        f"已自动整理记忆：新增 {added} 条，合并 {merged} 条"
+                    )
+                    self.memory_changed.emit()
+                elif result.get("error"):
+                    LOGGER.warning("自动整理记忆失败: %s", result["error"])
+            except Exception:  # noqa: BLE001
+                LOGGER.exception("自动整理记忆异常")
+            finally:
+                self._auto_memory_running = False
+
+        import threading
+
+        threading.Thread(target=work, daemon=True, name="auto-memory").start()
 
     def _on_agent_failed(self, sid: str, message: str) -> None:
         self.main.agent_failed(sid, message)
