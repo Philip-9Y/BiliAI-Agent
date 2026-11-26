@@ -26,6 +26,9 @@ DEFAULTS = {
     "summary_enabled": True,
     "history_char_limit": 18000,
     "history_keep_messages": 12,
+    "embedding_enabled": True,
+    "embedding_model": "BAAI/bge-small-zh-v1.5",
+    "embedding_cache_dir": "models",
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (
         "## 来源\n\n## 核心结论\n\n## 关键公式 / 推导\n\n"

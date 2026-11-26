@@ -80,6 +80,7 @@ class FlowTest(unittest.TestCase):
                 "thinking": False,
                 "auto_memory": False,
                 "query_rewrite": False,
+                "embedding_enabled": False,
             }
         )
         self.main = MainWindow(self.store, self.config)

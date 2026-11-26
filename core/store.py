@@ -57,7 +57,9 @@ CREATE TABLE IF NOT EXISTS memories (
     content TEXT NOT NULL,
     tags TEXT NOT NULL DEFAULT '',
     sources TEXT NOT NULL DEFAULT '',
-    enabled INTEGER NOT NULL DEFAULT 1
+    enabled INTEGER NOT NULL DEFAULT 1,
+    embedding BLOB,
+    embedding_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_memories_updated ON memories(updated_at DESC);
 """
@@ -92,6 +94,11 @@ class Store:
             self._conn.execute(
                 "ALTER TABLE sessions ADD COLUMN summary_upto INTEGER DEFAULT 0"
             )
+        memory_columns = [row[1] for row in self._conn.execute("PRAGMA table_info(memories)")]
+        if "embedding" not in memory_columns:
+            self._conn.execute("ALTER TABLE memories ADD COLUMN embedding BLOB")
+        if "embedding_hash" not in memory_columns:
+            self._conn.execute("ALTER TABLE memories ADD COLUMN embedding_hash TEXT")
         message_columns = [row[1] for row in self._conn.execute("PRAGMA table_info(messages)")]
         if "meta" not in message_columns:
             self._conn.execute("ALTER TABLE messages ADD COLUMN meta TEXT")
@@ -330,6 +337,13 @@ class Store:
     def get_memory(self, mid: str) -> dict | None:
         row = self._conn.execute("SELECT * FROM memories WHERE id = ?", (mid,)).fetchone()
         return dict(row) if row else None
+
+    def set_memory_embedding(self, mid: str, embedding: bytes, text_hash: str) -> None:
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE memories SET embedding = ?, embedding_hash = ? WHERE id = ?",
+                (embedding, text_hash, mid),
+            )
 
     def list_memories(self, query: str = "", include_disabled: bool = True) -> list[dict]:
         query = (query or "").strip()

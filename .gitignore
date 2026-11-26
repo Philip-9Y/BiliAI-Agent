@@ -5,3 +5,4 @@ __pycache__/
 backup/
 .idea/
 .vscode/
+models/

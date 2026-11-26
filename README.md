@@ -77,9 +77,21 @@ Agent 会自动调用：
 - **长对话摘要**：历史超过阈值时自动压缩较早消息，只保留最近原文（可在设置调整）
 - 也可手动点「整理」处理最近的对话，压缩并合并相似条目
 - 检索时会结合最近几轮问题，支持“这个/刚才/继续”这类模糊追问
+- **语义记忆**：本地 BGE-small-zh 向量 + 关键词混合检索（模型缺失自动回退）
 - 每条记忆可启用/停用、编辑、删除
 
 ![记忆库](assets/screenshot_memory.png)
+
+### 本地语义记忆模型
+
+- 模型：`BAAI/bge-small-zh-v1.5`（512 维，约 90MB，CPU 可跑）
+- 位置：`models/`（已 gitignore，不会上传 GitHub）
+- 安装/重装：
+  ```powershell
+  python scripts/install_embedding_model.py
+  ```
+- 模型缺失或加载失败时，自动回退到关键词检索，App 不会打不开
+- 可在「设置 → 启用本地语义记忆」关闭
 
 ## 快速开始
 
@@ -130,7 +142,7 @@ Study-AI/
 ## 测试
 
 ```powershell
-# 56 项单元 + 交互流程测试（离屏，不弹窗）
+# 57 项单元 + 交互流程测试（离屏，不弹窗）
 python -m unittest discover -s tests -t . -v
 
 # 真实 API 连通性（发合成图，产生极少量 token 费用）

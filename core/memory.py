@@ -7,13 +7,17 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import json
 import logging
 import math
 import re
 from collections import Counter
 
+import numpy as np
+
 from core.config import Config
+from core.embeddings import EmbeddingService
 from core.llm import DeepSeekClient
 from core.store import Store
 
@@ -35,10 +39,11 @@ CONSOLIDATE_PROMPT = """你是学习助手的记忆整理器。下面是用户�
 
 
 class MemoryManager:
-    def __init__(self, store: Store, config: Config, llm_factory=None) -> None:
+    def __init__(self, store: Store, config: Config, llm_factory=None, embedder=None) -> None:
         self.store = store
         self.config = config
         self._llm_factory = llm_factory
+        self.embedder = embedder if embedder is not None else EmbeddingService(config)
 
     # ------------------------------------------------------------------ 检索
     @staticmethod
@@ -56,18 +61,81 @@ class MemoryManager:
         question_grams = self._grams(query)
         if not question_grams:
             return []
+        memories = self.store.list_memories("", include_disabled=False)
+        if not memories:
+            return []
+
+        query_vector, memory_vectors = self._embedding_vectors(query, memories)
         scored: list[tuple[float, str, dict]] = []
-        for memory in self.store.list_memories("", include_disabled=False):
+        for memory in memories:
             memory_grams = self._grams(memory["content"] + " " + memory["tags"])
             overlap = len(question_grams & memory_grams)
             similarity = self._cosine(question_grams, memory_grams)
-            # 字符重合 + 余弦相似度混合；比单纯“命中一个词”更抗模糊表达
-            if overlap == 0 and similarity < 0.18:
+            semantic = 0.0
+            vector = memory_vectors.get(memory["id"])
+            if query_vector is not None and vector is not None:
+                semantic = self._array_cosine(query_vector, vector)
+            # 关键词/字符相似度 + 语义向量混合；模型缺失时 semantic=0，自动回退
+            if overlap == 0 and similarity < 0.18 and semantic < 0.38:
                 continue
-            score = overlap * 2.0 + similarity * 4.0
+            score = overlap * 2.0 + similarity * 4.0 + semantic * 8.0
             scored.append((score, memory["updated_at"], memory))
         scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
         return [memory for _, _, memory in scored[:limit]]
+
+    def _embedding_vectors(
+        self, query: str, memories: list[dict]
+    ) -> tuple[np.ndarray | None, dict[str, np.ndarray]]:
+        """返回 (query 向量, memory_id → 向量)；模型不可用时返回 (None, {})。"""
+        if self.embedder is None:
+            return None, {}
+        try:
+            if not self.embedder.available():
+                return None, {}
+            vectors: dict[str, np.ndarray] = {}
+            missing: list[tuple[dict, str, str]] = []
+            model_name = getattr(self.embedder, "model_name", "embedding")
+            for memory in memories:
+                text = f"{memory['content']} {memory['tags']}".strip()
+                text_hash = hashlib.sha1(
+                    f"{model_name}:{text}".encode("utf-8")
+                ).hexdigest()
+                raw = memory.get("embedding")
+                if raw and memory.get("embedding_hash") == text_hash:
+                    vector = np.frombuffer(raw, dtype=np.float32)
+                    if vector.size:
+                        vectors[memory["id"]] = vector
+                        continue
+                missing.append((memory, text, text_hash))
+
+            if missing:
+                encoded = self.embedder.embed([item[1] for item in missing])
+                if encoded:
+                    for (memory, _text, text_hash), vector in zip(missing, encoded):
+                        vector = np.asarray(vector, dtype=np.float32)
+                        self.store.set_memory_embedding(
+                            memory["id"], vector.tobytes(), text_hash
+                        )
+                        vectors[memory["id"]] = vector
+
+            encoded_query = self.embedder.embed([query])
+            query_vector = (
+                np.asarray(encoded_query[0], dtype=np.float32)
+                if encoded_query
+                else None
+            )
+            return query_vector, vectors
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("语义记忆检索失败，回退关键词")
+            return None, {}
+
+    @staticmethod
+    def _array_cosine(left: np.ndarray, right: np.ndarray) -> float:
+        left_norm = float(np.linalg.norm(left))
+        right_norm = float(np.linalg.norm(right))
+        if not left_norm or not right_norm:
+            return 0.0
+        return float(np.dot(left, right) / (left_norm * right_norm))
 
     @staticmethod
     def _cosine(left: set[str], right: set[str]) -> float:

@@ -10,8 +10,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.config import Config  # noqa: E402
+import numpy as np  # noqa: E402
+
 from core.memory import MemoryManager  # noqa: E402
 from core.store import Store  # noqa: E402
+
+
+class _FakeEmbedder:
+    model_name = "fake-bge"
+
+    def available(self) -> bool:
+        return True
+
+    def embed(self, texts):
+        vectors = []
+        for text in texts:
+            if any(word in text for word in ("量子", "叠加", "薛定谔")):
+                vectors.append(np.array([1.0, 0.0, 0.0], dtype=np.float32))
+            else:
+                vectors.append(np.array([0.0, 1.0, 0.0], dtype=np.float32))
+        return vectors
 
 
 class _FakeLLM:
@@ -29,6 +47,7 @@ class MemoryTest(unittest.TestCase):
         self.store = Store(self.tmp_path / "data")
         self.config = Config(path=self.tmp_path / "config.json")
         self.config.data["api_key"] = "sk-test"
+        self.config.data["embedding_enabled"] = False
 
     def tearDown(self) -> None:
         self.store.close()
@@ -63,6 +82,15 @@ class MemoryTest(unittest.TestCase):
         self.assertIn("递归树", manager.build_context("递归树怎么算时间复杂度"))
 
         self.assertEqual(manager.retrieve("完全无关的问题"), [])
+
+    def test_semantic_embedding_retrieval(self) -> None:
+        quantum = self.store.add_memory("量子计算中的叠加态与测量", "量子")
+        self.store.add_memory("用户喜欢黑底代码截图", "偏好")
+        manager = MemoryManager(self.store, self.config, embedder=_FakeEmbedder())
+        results = manager.retrieve("薛定谔猫的态是什么")
+        self.assertEqual(results[0]["id"], quantum)
+        # 向量应写入数据库，第二次检索可复用
+        self.assertIsNotNone(self.store.get_memory(quantum)["embedding"])
 
     def test_fuzzy_followup_uses_prior_context(self) -> None:
         self.store.add_memory("递归树时间复杂度用主定理分析", "算法")

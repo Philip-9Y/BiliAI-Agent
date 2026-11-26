@@ -128,6 +128,13 @@ class SettingsDialog(QDialog):
         self.history_limit.setValue(int(config.data.get("history_char_limit", 18000)))
         form.addRow("摘要阈值（字符）", self.history_limit)
 
+        self.embedding_enabled = QCheckBox("启用本地语义记忆（BGE-small-zh，需 models/ 模型）")
+        self.embedding_enabled.setChecked(bool(config.data.get("embedding_enabled", True)))
+        self.embedding_enabled.setToolTip(
+            "模型缺失或加载失败时自动回退关键词检索，不会导致 App 打不开。"
+        )
+        form.addRow("", self.embedding_enabled)
+
         self.note_template = QTextEdit()
         self.note_template.setPlainText(config.note_template)
         self.note_template.setFixedHeight(130)
@@ -228,6 +235,7 @@ class SettingsDialog(QDialog):
         self.config.data["query_rewrite"] = bool(self.query_rewrite.isChecked())
         self.config.data["summary_enabled"] = bool(self.summary_enabled.isChecked())
         self.config.data["history_char_limit"] = int(self.history_limit.value())
+        self.config.data["embedding_enabled"] = bool(self.embedding_enabled.isChecked())
         self.config.data["note_template"] = self.note_template.toPlainText().strip()
         self.config.save()
         self.accept()

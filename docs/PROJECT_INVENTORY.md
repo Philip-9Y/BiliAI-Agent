@@ -35,6 +35,7 @@ Study-AI/
 ├── plugins/               # 内置插件
 ├── legacy/                # 旧 Tk 版本（仅参考）
 ├── backup/                # 本机源码备份（gitignore，不上传）
+├── models/                # 本地 embedding 模型（gitignore，不上传）
 ├── data/                  # 运行时私有数据（不上传）
 └── __pycache__/           # Python 缓存（可删）
 ```
@@ -230,7 +231,7 @@ data/
 - `base_url`：`https://api.deepseek.com`
 - `model`：`deepseek-flash`
 - `max_tokens`（默认 4096，长回答会自动续写）、`temperature`
-- `save_captures`、`thinking`、`auto_memory`、`query_rewrite`、`summary_enabled`、`history_char_limit`、`history_keep_messages`、`note_template`
+- `save_captures`、`thinking`、`auto_memory`、`query_rewrite`、`summary_enabled`、`history_char_limit`、`history_keep_messages`、`embedding_enabled`、`embedding_model`、`embedding_cache_dir`、`note_template`
 - `hotkey_capture`、`pet_pos`、`pet_enabled`
 
 `config.example.json` 只保留空 Key 模板，可安全公开。
