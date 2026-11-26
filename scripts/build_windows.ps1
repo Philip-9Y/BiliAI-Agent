@@ -84,6 +84,10 @@ if (Test-Path "models") {
 if (Test-Path "extension") {
   Copy-Item "extension" "dist\Study-AI\extension" -Recurse -Force
 }
+if (Test-Path "plugins") {
+  if (Test-Path "dist\Study-AI\plugins") { Remove-Item "dist\Study-AI\plugins" -Recurse -Force }
+  Copy-Item "plugins" "dist\Study-AI\plugins" -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path "dist\Study-AI\data" | Out-Null
 
 Write-Host ""

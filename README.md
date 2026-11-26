@@ -293,6 +293,7 @@ python tests/render_screenshots.py
 - [算法与数据结构](docs/ALGORITHMS.md)：贪心、DP、分治、回溯、LSH、余弦、缓存
 - [代码作用与实现指南](docs/CODE_GUIDE.md)：每个模块/函数/请求流程/改功能入口
 - [改进清单](docs/IMPROVEMENTS.md)：每次改动的功能、作用和验证
+- [维护与收尾手册](docs/MAINTENANCE.md)：测试、构建、发布、已知限制
 
 ## 下一步（按优先级）
 

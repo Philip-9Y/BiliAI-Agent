@@ -318,3 +318,5 @@ python -c "import sqlite3; c=sqlite3.connect('data/bili_ask.db'); print({t:c.exe
 - 算法说明：`docs/ALGORITHMS.md`
 - 改进清单：`docs/IMPROVEMENTS.md`
 
+- 维护手册：`docs/MAINTENANCE.md`
+- 代码指南：`docs/CODE_GUIDE.md`
