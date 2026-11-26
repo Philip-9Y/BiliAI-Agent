@@ -9,7 +9,7 @@ import random
 from ctypes import wintypes
 
 from PySide6.QtCore import QPoint, QRect, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QCursor, QGuiApplication, QPainter
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QLabel, QMenu, QWidget
 
 from ui.pet_art import render_pet

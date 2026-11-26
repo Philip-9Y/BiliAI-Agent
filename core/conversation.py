@@ -12,13 +12,12 @@ import logging
 import threading
 import time
 import uuid
-from datetime import datetime
 
 from PIL import Image
 from PySide6.QtCore import QObject, Signal
 
 from core.config import Config
-from core.llm import SYSTEM_PROMPT, DeepSeekClient, encode_image, image_block
+from core.llm import DeepSeekClient, encode_image, image_block
 from core.memory import MemoryManager
 from core.model_router import ModelRouter
 from core.store import Store
@@ -286,7 +285,7 @@ class ConversationAgent(QObject):
             "你是检索问题改写器。根据最近对话，把用户最新问题改写成一个独立、完整、"
             "适合检索长期记忆的问题。必须保留“这个/刚才/它”指代的对象。"
             "只输出改写后的问题，不要回答问题，不要解释，不超过 60 字。\n\n"
-            f"最近对话：\n" + "\n".join(lines) + f"\n\n用户最新问题：{question}"
+            "最近对话：\n" + "\n".join(lines) + f"\n\n用户最新问题：{question}"
         )
         try:
             rewritten = client.chat(

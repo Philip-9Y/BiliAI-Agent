@@ -180,17 +180,15 @@ Study-AI/
 ├── data/
 │   ├── bili_ask.db              # 会话 / 消息（含工具步骤 meta）/ 笔记 / 记忆
 │   ├── captures/2026-10-17/….png# 截图原图
-│   ├── math_cache/              # 公式渲染缓存
 │   ├── plugins/                 # 用户安装的插件
 │   └── app.log                  # 运行日志
 ├── plugins/study_notes/         # 内置示例插件
-└── legacy/                      # 旧 Tk 版本，仅参考
 ```
 
 ## 测试
 
 ```powershell
-# 68 项单元 + 交互流程测试（离屏，不弹窗）
+# 64 项单元 + 交互流程测试（离屏，不弹窗）
 python -m unittest discover -s tests -t . -v
 
 # 真实 API 连通性（发合成图，产生极少量 token 费用）

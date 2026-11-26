@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPixmap  # noqa: E402
-from PySide6.QtWidgets import QApplication, QWidget  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from core.config import Config  # noqa: E402
 from core.store import Store  # noqa: E402

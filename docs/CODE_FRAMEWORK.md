@@ -112,7 +112,6 @@ QApplication
 | `PluginManager` | `core/plugins.py` | 扫描/安装/启停插件，往 registry 注册工具 | 不执行具体工具逻辑 |
 | `Word` 工具 | `core/word.py` | COM 操作当前 Word 文档：插图/文字/剪贴板 | 不排版整篇文档 |
 
-> 旧版 `core/agent.py`、`ui/agent_pane.py`、`ui/answer_panel.py` 已不在主流程，可忽略。
 
 ---
 
@@ -265,7 +264,6 @@ data/plugins/*/tool.py 用户安装插件
 
 缓存：
 
-- `data/math_cache/`：公式 PNG；
 - `render_answer` 的 LRU 缓存。
 
 ---
@@ -322,7 +320,6 @@ data/plugins/*/tool.py 用户安装插件
 - 记忆是关键词检索，不是向量；
 - 插件无沙箱；
 - `main_window.py` 偏大；
-- 旧代码 `agent.py` / `agent_pane.py` / `answer_panel.py` 可删；
 - 没有数据库版本号迁移框架；
 - Word 只操作当前文档光标。
 

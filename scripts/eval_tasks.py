@@ -74,6 +74,7 @@ def main() -> int:
     args = parser.parse_args()
 
     app = QCoreApplication.instance() or QCoreApplication([])
+    app.setApplicationName("Study-AI eval")
     tasks = json.loads(Path(args.tasks).read_text(encoding="utf-8"))
     if args.limit:
         tasks = tasks[: args.limit]

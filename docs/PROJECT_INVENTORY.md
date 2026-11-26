@@ -33,7 +33,6 @@ Study-AI/
 ├── tests/                 # 测试与开发脚本
 ├── docs/                  # 架构/阅读/学习文档
 ├── plugins/               # 内置插件
-├── legacy/                # 旧 Tk 版本（仅参考）
 ├── backup/                # 本机源码备份（gitignore，不上传）
 ├── models/                # 本地 embedding 模型（gitignore，不上传）
 ├── data/                  # 运行时私有数据（不上传）
@@ -101,8 +100,6 @@ Study-AI/
 | `settings_dialog.py` | API Key、模型、tokens、桌宠、深度思考等设置 |
 | `plugins_dialog.py` | 插件管理：安装文件夹/zip、启停、卸载、打开目录 |
 | `utils.py` | 时间格式化、文本截断、PIL→QPixmap |
-| `agent_pane.py` | **旧版** Agent 任务页（新 UI 不再使用） |
-| `answer_panel.py` | **旧版** 浮动回答面板（新 UI 不再使用） |
 
 ---
 
@@ -118,7 +115,6 @@ Study-AI/
 | `test_plugins.py` | 插件加载、安装、卸载 |
 | `test_render.py` | Markdown/公式/代码/表格/异常公式 |
 | `test_pet.py` | 桌宠状态、双击 |
-| `test_agent.py` | 旧版 AgentRunner 的测试 |
 | `live_api_check.py` | 手动真实 API 连通性检查（会产生少量 token 费用） |
 | `render_screenshots.py` | 不弹窗生成 `assets/screenshot_*.png` |
 
@@ -173,20 +169,6 @@ plugins/study_notes/
 
 ---
 
-## 9. legacy/：旧 Tk 版本
-
-| 文件 | 作用 |
-| --- | --- |
-| `app.py` | 旧 Tkinter 界面 |
-| `config.py` | 旧配置 |
-| `hotkey.py` | 旧热键 |
-| `llm.py` | 旧 LLM 客户端 |
-| `store.py` | 旧存储 |
-| `selftest.py` | 旧自检 |
-
-仅作历史参考，当前不运行。
-
----
 
 ## 10. data/：本机私有数据（不上传）
 
@@ -198,7 +180,6 @@ data/
 ├── app.log              # 运行日志
 ├── captures/            # 截图
 │   └── 2026-10-17/      # 按日期分目录（当前 4 张）
-├── math_cache/          # 公式渲染缓存 PNG（当前 182 张）
 ├── notes/               # 旧版笔记文件目录（当前空）
 └── plugins/             # 用户安装的插件（当前空）
 ```
@@ -247,7 +228,6 @@ data/
 - 分支：`main`
 - 提交：以 `git log --oneline -1` 为准
 - 跟踪文件：69 个
-- 内容：`app.py`、`core/`、`ui/`、`tests/`、`docs/`、`plugins/`、`assets/`、`legacy/`、`README.md`、`requirements.txt`、`start.bat`、`config.example.json`、`.gitignore`
 
 **不在 GitHub：**
 

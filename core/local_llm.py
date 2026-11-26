@@ -34,8 +34,8 @@ class OllamaClient:
         self._available_until = 0.0
         self._available_cache = False
 
-    @classmethod
-    def list_models(cls, base_url: str = "http://127.0.0.1:11434", timeout: float = 2.0) -> list[str]:
+    @staticmethod
+    def list_models(base_url: str = "http://127.0.0.1:11434", timeout: float = 2.0) -> list[str]:
         try:
             response = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=timeout)
             if response.status_code != 200:

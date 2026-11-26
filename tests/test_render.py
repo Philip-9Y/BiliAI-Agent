@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ui.answer_render import render_answer, render_stream_text  # noqa: E402
+from ui.answer_render import render_answer  # noqa: E402
 
 
 class AnswerRenderTest(unittest.TestCase):
@@ -59,11 +59,6 @@ class AnswerRenderTest(unittest.TestCase):
         self.assertNotIn("**", html)
         self.assertNotIn("$\\", html)
         self.assertIn("长度限制", html)
-
-    def test_stream_text_removes_latex(self) -> None:
-        text = render_stream_text(r"公式 $\frac{a}{b}$ 和 \(x^2\)，还有 $$n^2$$")
-        self.assertNotIn(r"\frac", text)
-        self.assertNotIn("$", text)
 
 
 if __name__ == "__main__":

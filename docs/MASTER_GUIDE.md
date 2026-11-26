@@ -29,11 +29,10 @@ Study-AI/
 │
 ├── core/                  业务核心（15 个 py）
 ├── ui/                    界面（15 个 py）
-├── tests/                 测试与开发脚本（11 个）
+├── tests/                 测试与开发脚本（13 个文件，10 个 unittest）
 ├── docs/                  文档（本文件 + 5 份深入文档）
 ├── assets/                图标 + 界面截图
 ├── plugins/               内置插件
-├── legacy/                旧 Tk 版本（仅参考）
 ├── data/                  私有运行数据（不上传）
 └── backup/                本机源码备份（gitignore）
 ```
@@ -87,8 +86,6 @@ Study-AI/
 | `settings_dialog.py` | API Key/模型/tokens/桌宠/思考开关 | 设置 | ★ |
 | `plugins_dialog.py` | 插件安装/启停/卸载 | 插件管理 | ★ |
 | `utils.py` | 时间格式、截断、PIL→QPixmap | 小工具 | ★ |
-| `agent_pane.py` | 旧版 Agent 任务页 | 不用 | 忽略 |
-| `answer_panel.py` | 旧版浮动回答面板 | 不用 | 忽略 |
 
 ## 1.5 tests/ 每个文件
 
@@ -101,7 +98,6 @@ Study-AI/
 | `test_plugins.py` | 插件加载、安装、卸载 |
 | `test_render.py` | Markdown/公式/代码/表格/异常公式 |
 | `test_pet.py` | 桌宠状态、双击 |
-| `test_agent.py` | 旧版 AgentRunner |
 | `live_api_check.py` | 手动真实 API 连通性（会产生少量费用） |
 | `render_screenshots.py` | 不弹窗生成 `assets/screenshot_*.png` |
 | `__init__.py` | 包标记 |
@@ -124,7 +120,6 @@ Study-AI/
 | --- | --- | --- | --- |
 | `assets/` | `app.png`、`app.ico`、`luffy*.ico`、5 张 screenshot | 图标/截图 | 是 |
 | `plugins/study_notes/` | `plugin.json`、`tool.py` | 示例插件 | 是 |
-| `legacy/` | 旧 Tk 版：app/config/hotkey/llm/store/selftest | 历史参考 | 是 |
 | `backup/` | source.zip、git bundle、README | 本机源码备份 | 否（gitignore） |
 | `data/` | DB、截图、日志、公式缓存 | 运行数据 | 否（私有） |
 | `.git/` | 提交历史 | 版本库 | 版本库内部 |

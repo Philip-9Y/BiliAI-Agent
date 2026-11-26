@@ -11,7 +11,6 @@ import math
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
-    QFont,
     QLinearGradient,
     QPainter,
     QPainterPath,

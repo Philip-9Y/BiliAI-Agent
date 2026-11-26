@@ -79,7 +79,7 @@ def insert_image_to_word(image_path: str = "", caption: str = "", center: bool =
         selection = app.Selection
         if center:
             selection.ParagraphFormat.Alignment = 1
-        shape = selection.InlineShapes.AddPicture(str(path), False, True)
+        selection.InlineShapes.AddPicture(str(path), False, True)
         selection.TypeParagraph()
         if caption:
             selection.ParagraphFormat.Alignment = 1
@@ -131,7 +131,7 @@ def insert_clipboard_image_to_word(caption: str = "") -> str:
     """把剪贴板里的图片（或复制的图片文件）插入 Word 当前光标处。"""
     from datetime import datetime
 
-    from PIL import Image, ImageGrab
+    from PIL import ImageGrab
 
     content = ImageGrab.grabclipboard()
     if content is None:

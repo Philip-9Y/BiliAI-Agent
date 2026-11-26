@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 from core.config import Config
 from core.local_llm import OllamaClient
 from core.store import Store
-from ui.answer_render import render_answer, render_stream_text
+from ui.answer_render import render_answer
 from ui.memory_pane import MemoryPane
 from ui.notes_pane import NotesPane
 from ui.pet_art import render_pet

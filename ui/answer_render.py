@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import html
-import io
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -280,19 +279,6 @@ def _render_inline_code(code: str) -> str:
         "border-radius:4px;font-family:Consolas,monospace;font-size:12px;"
         '">%s</code>' % (INLINE_BG, _escape(code))
     )
-
-
-def render_stream_text(text: str) -> str:
-    """流式阶段的轻量显示：把 LaTeX 转成 Unicode，避免满屏反斜杠。"""
-    if not text:
-        return ""
-    source = text.replace("\r\n", "\n")
-    source = _DISPLAY_MATH.sub(
-        lambda match: "\n" + _unicode_math(match.group(1) or match.group(2) or "") + "\n", source
-    )
-    source = _PAREN_MATH.sub(lambda match: _unicode_math(match.group(1)), source)
-    source = _INLINE_MATH.sub(lambda match: _unicode_math(match.group(1)), source)
-    return source
 
 
 @lru_cache(maxsize=64)

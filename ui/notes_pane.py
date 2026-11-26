@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from core.config import Config
 from core.store import Store
 from ui.answer_render import render_answer
-from ui.utils import elide, format_time
+from ui.utils import format_time
 
 
 class NotesPane(QWidget):

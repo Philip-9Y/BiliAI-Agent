@@ -93,14 +93,11 @@ Study-AI/
 │   ├── settings_dialog.py     # 设置
 │   ├── plugins_dialog.py      # 插件管理
 │   ├── utils.py               # 时间格式、文本截断、Pixmap 转换
-│   ├── agent_pane.py          # 旧 Agent 任务页（新 UI 不用）
-│   └── answer_panel.py        # 旧浮动回答面板（新 UI 不用）
 ├── plugins/study_notes/       # 内置示例插件
-├── tests/                     # 68 项单元 + 流程测试
+├── tests/                     # 64 项单元 + 流程测试
 ├── assets/                    # 图标、截图
 ├── data/                      # 运行时数据（gitignore）
 ├── config.json                # 配置（gitignore，含 API Key）
-└── legacy/                    # 旧 Tk 版本
 ```
 
 > 标 ★ 的是阅读源码时最值得先读的两个文件。
@@ -394,7 +391,6 @@ ToolSpec(
 - `theme.py`：浅色 QSS；`pet_window.py` / `pet_art.py`：桌宠与图标；
 - `capture_overlay.py` / `question_dialog.py`：框选和提问。
 
-> 旧 UI（`agent_pane.py`、`answer_panel.py`）和旧 `core/agent.py` 已不在主流程，保留是为了兼容旧测试/参考，可以后续删除。
 
 ---
 
@@ -457,7 +453,6 @@ ToolSpec(
 4. **关键词记忆**，没有 embedding/向量库。
 5. **单进程插件无沙箱**，也没有插件签名/权限声明。
 6. **`main_window.py` 偏大**（约 690 行），可拆成会话列表、对话流、输入框、标题栏组件。
-7. **旧代码残留**：`core/agent.py`、`ui/agent_pane.py`、`ui/answer_panel.py` 不再被主流程使用。
 8. **没有数据库版本号**，迁移靠 `ALTER TABLE` 探测。
 9. **测试对 GUI 的覆盖有限**：主要覆盖流程/数据，视觉回归靠截图脚本。
 10. **没有安装包/自动更新**，目前靠源码 + 快捷方式运行。
@@ -519,7 +514,6 @@ python -m unittest discover -s tests -t .
 - `test_context.py`：前台上下文、B 站标题解析、BV 号；
 - `test_render.py`：Markdown/公式/代码/表格/异常公式；
 - `test_pet.py`：桌宠状态、双击；
-- `agent.py` 旧测试：旧 AgentRunner（仍保留）。
 
 测试用 `ScriptedLLM` / 临时 SQLite 目录，不访问真实 API。
 
