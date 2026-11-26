@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import heapq
 import json
 import logging
 import math
@@ -117,8 +118,10 @@ class MemoryManager:
                 continue
             score = overlap * 2.0 + similarity * 4.0 + semantic * 8.0
             scored.append((score, memory["updated_at"], memory))
-        scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
-        return [memory for _, _, memory in scored[:limit]]
+        best = heapq.nlargest(
+            limit, scored, key=lambda item: (item[0], item[1])
+        )
+        return [memory for _, _, memory in best]
 
     def _embedding_vectors(
         self, query: str, memories: list[dict]

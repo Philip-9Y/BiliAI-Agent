@@ -355,3 +355,4 @@ data/plugins/*/tool.py 用户安装插件
 - 算法说明：`docs/ALGORITHMS.md`
 - 改进清单：`docs/IMPROVEMENTS.md`
 
+> 代码逐模块说明见 [CODE_GUIDE.md](CODE_GUIDE.md)。

@@ -272,6 +272,7 @@ python tests/render_screenshots.py
 - [源码阅读指南](docs/READING_GUIDE.md)：阅读顺序、断点/调试、三条调用链、练习任务
 - [系统学习路线](docs/LEARNING_PATH.md)：8 周计划、底层知识地图、官方文档与实验
 - [算法与数据结构](docs/ALGORITHMS.md)：贪心、DP、分治、回溯、LSH、余弦、缓存
+- [代码作用与实现指南](docs/CODE_GUIDE.md)：每个模块/函数/请求流程/改功能入口
 - [改进清单](docs/IMPROVEMENTS.md)：每次改动的功能、作用和验证
 
 ## 下一步（按优先级）

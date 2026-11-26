@@ -37,7 +37,7 @@ class LSHIndex:
                 mapping.setdefault(key, []).append(row)
             self.buckets.append(mapping)
 
-    def query(self, vector: np.ndarray, limit: int = 0) -> set[str]:
+    def query(self, vector: np.ndarray) -> set[str]:
         if not self.ids:
             return set()
         query = np.asarray(vector, dtype=np.float32)
@@ -48,7 +48,4 @@ class LSHIndex:
             candidates.update(self.buckets[table].get(key, []))
         if not candidates:
             return set(self.ids)
-        if limit and len(candidates) > limit:
-            # 以与第一个表的哈希一致程度做简单截断，避免候选过多
-            candidates = set(list(candidates)[:limit])
         return {self.ids[index] for index in candidates}
