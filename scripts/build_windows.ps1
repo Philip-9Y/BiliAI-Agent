@@ -17,15 +17,44 @@ if (Test-Path "build") { Remove-Item "build" -Recurse -Force }
 if (Test-Path "dist\Study-AI") { Remove-Item "dist\Study-AI" -Recurse -Force }
 
 Write-Host "== PyInstaller 打包 =="
-python -m PyInstaller `
-  --noconfirm --clean --windowed --onedir `
-  --name "Study-AI" `
-  @iconArgs `
-  --collect-all fastembed `
-  --collect-all onnxruntime `
-  --collect-submodules markdown `
-  --collect-submodules pygments `
-  app.py
+$pyiArgs = @(
+  "-m", "PyInstaller",
+  "--noconfirm", "--clean", "--windowed", "--onedir",
+  "--name", "Study-AI",
+  "--collect-all", "fastembed",
+  "--collect-all", "onnxruntime",
+  "--collect-submodules", "markdown",
+  "--collect-submodules", "pygments",
+  "--collect-submodules", "win32com",
+  "--exclude-module", "PyQt5",
+  "--exclude-module", "PyQt6",
+  "--exclude-module", "PySide2",
+  "--exclude-module", "sklearn",
+  "--exclude-module", "skimage",
+  "--exclude-module", "scipy",
+  "--exclude-module", "pandas",
+  "--exclude-module", "astropy",
+  "--exclude-module", "plotly",
+  "--exclude-module", "panel",
+  "--exclude-module", "bokeh",
+  "--exclude-module", "holoviews",
+  "--exclude-module", "seaborn",
+  "--exclude-module", "statsmodels",
+  "--exclude-module", "sympy",
+  "--exclude-module", "IPython",
+  "--exclude-module", "jupyter",
+  "--exclude-module", "notebook",
+  "--exclude-module", "nbconvert",
+  "--exclude-module", "sphinx",
+  "--exclude-module", "black",
+  "--exclude-module", "jedi",
+  "--exclude-module", "parso",
+  "--exclude-module", "zmq",
+  "--exclude-module", "tornado"
+)
+if ($iconArgs.Count -gt 0) { $pyiArgs += $iconArgs }
+$pyiArgs += "app.py"
+& python @pyiArgs
 
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 

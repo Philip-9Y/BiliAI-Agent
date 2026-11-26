@@ -120,6 +120,7 @@ Agent 会自动调用：
 ### Windows 打包
 
 - 一键构建目录：`powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1`
+- 建议在干净的 venv 里构建；Anaconda 环境包含大量无关科学包，PyInstaller 会明显变慢
 - Inno Setup 安装包模板：`scripts/Study-AI.iss`
 - 打包后 `config.json`、`data/`、`models/` 都在 exe 同目录
 
