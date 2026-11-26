@@ -29,6 +29,14 @@ DEFAULTS = {
     "embedding_enabled": True,
     "embedding_model": "BAAI/bge-small-zh-v1.5",
     "embedding_cache_dir": "models",
+    "model_mode": "auto",
+    "local_base_url": "http://127.0.0.1:11434",
+    "local_model": "qwen2.5-3b:latest",
+    "local_max_tokens": 1024,
+    "local_temperature": 0.6,
+    "local_num_ctx": 4096,
+    "local_keep_alive": "10m",
+    "auto_local_max_chars": 300,
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (
         "## 来源\n\n## 核心结论\n\n## 关键公式 / 推导\n\n"

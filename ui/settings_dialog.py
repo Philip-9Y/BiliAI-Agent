@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from core.config import DATA_DIR, Config
 from core.llm import DeepSeekClient
+from core.local_llm import OllamaClient
 
 
 class _TestSignals(QObject):
@@ -76,7 +77,36 @@ class SettingsDialog(QDialog):
         self.model_combo.setEditable(True)
         self.model_combo.addItems(["deepseek-flash", "deepseek-pro"])
         self.model_combo.setCurrentText(config.model)
-        form.addRow("模型", self.model_combo)
+        form.addRow("云端模型", self.model_combo)
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("自动：简单问答本地，其余云端", "auto")
+        self.mode_combo.addItem("本地优先：简单问答本地，工具/截图云端", "local")
+        self.mode_combo.addItem("仅云端：全部使用 DeepSeek", "cloud")
+        mode_index = self.mode_combo.findData(str(config.data.get("model_mode") or "auto"))
+        self.mode_combo.setCurrentIndex(mode_index if mode_index >= 0 else 0)
+        form.addRow("模型模式", self.mode_combo)
+
+        local_row = QHBoxLayout()
+        self.local_model = QComboBox()
+        self.local_model.setEditable(True)
+        self.local_model.addItems(
+            ["qwen2.5-3b:latest", "qwen2.5-3b-cpu:latest", "qwen3.5:4b"]
+        )
+        self.local_model.setCurrentText(
+            str(config.data.get("local_model") or "qwen2.5-3b:latest")
+        )
+        refresh_local = QPushButton("刷新")
+        refresh_local.setObjectName("Ghost")
+        refresh_local.clicked.connect(self._refresh_local_models)
+        local_row.addWidget(self.local_model, 1)
+        local_row.addWidget(refresh_local)
+        form.addRow("本地模型", local_row)
+
+        self.local_url = QLineEdit(
+            str(config.data.get("local_base_url") or "http://127.0.0.1:11434")
+        )
+        form.addRow("Ollama 地址", self.local_url)
 
         self.tokens = QSpinBox()
         self.tokens.setRange(256, 8192)
@@ -179,6 +209,20 @@ class SettingsDialog(QDialog):
         layout.addLayout(buttons)
 
     # ------------------------------------------------------------------
+    def _refresh_local_models(self) -> None:
+        models = OllamaClient.list_models(self.local_url.text().strip())
+        if not models:
+            self.test_status.setText("没有发现 Ollama 模型，请确认 Ollama 正在运行")
+            return
+        current = self.local_model.currentText().strip()
+        self.local_model.clear()
+        self.local_model.addItems(models)
+        if current and self.local_model.findText(current) < 0:
+            self.local_model.addItem(current)
+        if current:
+            self.local_model.setCurrentText(current)
+        self.test_status.setText(f"发现 {len(models)} 个本地模型")
+
     def _toggle_key_visibility(self, visible: bool) -> None:
         self.key_edit.setEchoMode(QLineEdit.Normal if visible else QLineEdit.Password)
 
@@ -228,6 +272,9 @@ class SettingsDialog(QDialog):
         self.config.data["model"] = self.model_combo.currentText().strip() or "deepseek-flash"
         self.config.data["max_tokens"] = int(self.tokens.value())
         self.config.data["temperature"] = float(self.temp.value())
+        self.config.data["model_mode"] = str(self.mode_combo.currentData() or "auto")
+        self.config.data["local_model"] = self.local_model.currentText().strip() or "qwen2.5-3b:latest"
+        self.config.data["local_base_url"] = self.local_url.text().strip() or "http://127.0.0.1:11434"
         self.config.data["save_captures"] = bool(self.save_caps.isChecked())
         self.config.data["pet_enabled"] = bool(self.pet_enabled.isChecked())
         self.config.data["thinking"] = bool(self.thinking.isChecked())

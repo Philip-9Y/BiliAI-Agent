@@ -142,6 +142,7 @@ class MainWindow(QWidget):
         self.refresh_memories()
         self.notes_pane.refresh()
         self.show_empty()
+        self.refresh_model_label()
         self._back_shortcut = QShortcut(QKeySequence("Esc"), self)
         self._back_shortcut.activated.connect(self._back_to_chat)
 
@@ -447,6 +448,16 @@ class MainWindow(QWidget):
         self.stack.setCurrentIndex(0)
         self.show_empty()
         self.composer.setFocus()
+
+    def refresh_model_label(self) -> None:
+        mode = str(self.config.data.get("model_mode") or "auto")
+        labels = {"auto": "自动路由", "local": "本地优先", "cloud": "云端"}
+        self.model_label.setText(labels.get(mode, "自动路由"))
+        local_model = str(self.config.data.get("local_model") or "qwen2.5-3b:latest")
+        self.model_label.setToolTip(
+            f"云端：{self.config.model}\n本地：{local_model}\n"
+            "自动模式下，简单问答走本地，截图和工具走云端"
+        )
 
     def show_empty(self) -> None:
         self._active_sid = ""

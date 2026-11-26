@@ -281,6 +281,7 @@ def main() -> int:
         enabled = bool(config.data.get("pet_enabled", True))
         pet.set_enabled(enabled)
         sync_pet_action(enabled)
+        main_window.refresh_model_label()
 
     controller.settings_changed.connect(on_settings_changed)
 

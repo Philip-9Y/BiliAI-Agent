@@ -20,6 +20,7 @@ from PySide6.QtCore import QObject, Signal
 from core.config import Config
 from core.llm import SYSTEM_PROMPT, DeepSeekClient, encode_image, image_block
 from core.memory import MemoryManager
+from core.model_router import ModelRouter
 from core.store import Store
 from core.tools import ToolRegistry
 
@@ -52,6 +53,7 @@ class ConversationAgent(QObject):
         registry: ToolRegistry,
         memory: MemoryManager | None = None,
         llm_factory=None,
+        model_router=None,
         max_steps: int = 8,
         parent=None,
     ) -> None:
@@ -61,6 +63,8 @@ class ConversationAgent(QObject):
         self.registry = registry
         self.memory = memory
         self._llm_factory = llm_factory
+        self.model_router = model_router or ModelRouter(config)
+        self.last_route = ""
         self.max_steps = max_steps
         self._runs: dict[str, threading.Event] = {}
         self._stop_events: dict[str, threading.Event] = {}
@@ -99,16 +103,33 @@ class ConversationAgent(QObject):
         ).start()
 
     # ------------------------------------------------------------------
-    def _make_client(self):
+    def _make_client(self, sid: str):
         if self._llm_factory is not None:
             return self._llm_factory()
-        return DeepSeekClient(
-            api_key=self.config.api_key,
-            base_url=self.config.base_url,
-            model=self.config.model,
-            max_tokens=int(self.config.data.get("max_tokens", 4096)),
-            temperature=float(self.config.data.get("temperature", 0.6)),
-        )
+        try:
+            session = self.store.get_session(sid) or {}
+            rows = self.store.get_messages(sid)
+            has_image = bool(session.get("image_path")) or any(
+                row.get("image_path") for row in rows
+            )
+            question = ""
+            for row in reversed(rows):
+                if row["role"] == "user":
+                    question = row["content"] or ""
+                    break
+            client, route = self.model_router.choose(question, has_image)
+            self.last_route = route
+            LOGGER.info("模型路由: %s", route)
+            return client
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("模型路由失败，使用云端")
+            return DeepSeekClient(
+                api_key=self.config.api_key,
+                base_url=self.config.base_url,
+                model=self.config.model,
+                max_tokens=int(self.config.data.get("max_tokens", 4096)),
+                temperature=float(self.config.data.get("temperature", 0.6)),
+            )
 
     def _prepare_history(self, sid: str, session: dict, rows: list[dict], client):
         """历史过长时，把较早消息压缩成摘要，只保留最近若干条。"""
@@ -284,7 +305,7 @@ class ConversationAgent(QObject):
         started = time.time()
         steps: list[dict] = []
         try:
-            client = self._make_client()
+            client = self._make_client(sid)
             messages = self._build_messages(sid, client=client)
             if task:
                 messages.append({"role": "user", "content": task})
