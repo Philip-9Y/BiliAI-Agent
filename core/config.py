@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
-APP_DIR = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    # PyInstaller 打包后：配置、data、models 都放在 exe 同目录，便于用户备份
+    APP_DIR = Path(sys.executable).resolve().parent
+else:
+    APP_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = APP_DIR / "config.json"
 DATA_DIR = APP_DIR / "data"
 
@@ -37,6 +42,10 @@ DEFAULTS = {
     "local_num_ctx": 4096,
     "local_keep_alive": "10m",
     "auto_local_max_chars": 300,
+    "http_retries": 2,
+    "http_backoff": 1.0,
+    "telemetry_enabled": True,
+    "bridge_port": 8765,
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (
         "## 来源\n\n## 核心结论\n\n## 关键公式 / 推导\n\n"

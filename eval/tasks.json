@@ -1,0 +1,10 @@
+[
+  {"id": "recursion", "question": "用两句话解释什么是递归，并给一个生活类比。", "expect_any": ["递归", "自身"]},
+  {"id": "complexity", "question": "时间复杂度 O(n log n) 是什么意思？", "expect_any": ["复杂度", "增长", "n log n"]},
+  {"id": "master-theorem", "question": "递归式 T(n)=2T(n/2)+n 的时间复杂度是多少？", "expect_any": ["n log n", "O(n log n)", "主定理"]},
+  {"id": "stack-queue", "question": "栈和队列的核心区别是什么？", "expect_any": ["后进先出", "先进先出", "LIFO", "FIFO"]},
+  {"id": "python-list-tuple", "question": "Python 的 list 和 tuple 有什么区别？", "expect_any": ["可变", "不可变", "tuple"]},
+  {"id": "newton", "question": "牛顿第二定律的公式和含义是什么？", "expect_any": ["F=ma", "F = ma", "加速度"]},
+  {"id": "gradient", "question": "梯度下降为什么能降低损失？", "expect_any": ["梯度", "下降", "损失"]},
+  {"id": "sql-index", "question": "数据库索引为什么能加快查询？", "expect_any": ["索引", "查找", "B树", "B+树"]}
+]

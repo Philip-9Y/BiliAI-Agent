@@ -20,6 +20,7 @@ from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
+from core.bridge import BrowserBridge
 from core.config import APP_DIR, DATA_DIR, Config
 from core.context import ContextWatcher
 from core.controller import Controller
@@ -117,6 +118,8 @@ def main() -> int:
     store.import_legacy_jsonl(DATA_DIR / "notes.jsonl")
 
     watcher = ContextWatcher()
+    bridge = BrowserBridge(int(config.data.get("bridge_port", 8765)))
+    bridge.start()
     registry = build_default_registry(watcher, store)
     plugin_manager = PluginManager(config, registry)
     plugin_manager.load_all()
@@ -125,7 +128,7 @@ def main() -> int:
     agent = ConversationAgent(store, config, registry, memory=memory)
     main_window = MainWindow(store, config)
     controller = Controller(
-        store, config, main_window, agent, context_watcher=watcher
+        store, config, main_window, agent, context_watcher=watcher, bridge=bridge
     )
     pet = PetWindow()
 
@@ -203,6 +206,7 @@ def main() -> int:
         pet.hide()
         tray.hide()
         store.close()
+        bridge.stop()
         app.quit()
         QTimer.singleShot(800, lambda: os._exit(0))
 

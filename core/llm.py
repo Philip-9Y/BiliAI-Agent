@@ -8,10 +8,14 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
+import time
 from typing import Callable
 
 import requests
 from PIL import Image
+
+LOGGER = logging.getLogger("biliask.llm")
 
 MAX_IMAGE_SIDE = 2000
 
@@ -59,6 +63,8 @@ class DeepSeekClient:
         timeout: tuple[float, float] = (10.0, 180.0),
         thinking: bool = False,
         reasoning_effort: str = "low",
+        retries: int = 2,
+        backoff: float = 1.0,
     ) -> None:
         if not api_key:
             raise LLMError("未配置 API Key，请在设置里填写")
@@ -70,6 +76,8 @@ class DeepSeekClient:
         self.timeout = timeout
         self.thinking = thinking
         self.reasoning_effort = reasoning_effort
+        self.retries = max(0, int(retries))
+        self.backoff = max(0.1, float(backoff))
 
     @property
     def url(self) -> str:
@@ -77,6 +85,55 @@ class DeepSeekClient:
 
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+
+    def _post(self, payload: dict, stream: bool = False):
+        """带指数退避的连接/限流重试；只重试可安全重放的请求。"""
+        retry_statuses = {429, 500, 502, 503, 504}
+        last_error: Exception | None = None
+        for attempt in range(self.retries + 1):
+            try:
+                response = requests.post(
+                    self.url,
+                    headers=self._headers(),
+                    json=payload,
+                    timeout=self.timeout,
+                    stream=stream,
+                )
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt < self.retries:
+                    delay = self.backoff * (2**attempt)
+                    LOGGER.warning(
+                        "云端请求失败，%.1fs 后重试（%s/%s）：%s",
+                        delay,
+                        attempt + 1,
+                        self.retries,
+                        exc,
+                    )
+                    time.sleep(delay)
+                    continue
+                raise LLMError(f"网络请求失败（已重试 {self.retries} 次）：{exc}") from exc
+
+            if response.status_code in retry_statuses and attempt < self.retries:
+                retry_after = response.headers.get("Retry-After")
+                delay = self.backoff * (2**attempt)
+                if retry_after:
+                    try:
+                        delay = max(delay, float(retry_after))
+                    except ValueError:
+                        pass
+                LOGGER.warning(
+                    "云端返回 HTTP %s，%.1fs 后重试（%s/%s）",
+                    response.status_code,
+                    delay,
+                    attempt + 1,
+                    self.retries,
+                )
+                response.close()
+                time.sleep(delay)
+                continue
+            return response
+        raise LLMError(f"网络请求失败：{last_error}")
 
     def _payload(self, messages: list[dict], stream: bool) -> dict:
         payload = {
@@ -106,12 +163,9 @@ class DeepSeekClient:
         if temperature is not None and not self.thinking:
             payload["temperature"] = temperature
         try:
-            resp = requests.post(
-                self.url,
-                headers=self._headers(),
-                json=payload,
-                timeout=self.timeout,
-            )
+            resp = self._post(payload)
+        except LLMError:
+            raise
         except requests.RequestException as exc:
             raise LLMError(f"网络请求失败：{exc}") from exc
         if resp.status_code != 200:
@@ -139,9 +193,9 @@ class DeepSeekClient:
             "tool_choice": tool_choice,
         }
         try:
-            resp = requests.post(
-                self.url, headers=self._headers(), json=payload, timeout=self.timeout
-            )
+            resp = self._post(payload)
+        except LLMError:
+            raise
         except requests.RequestException as exc:
             raise LLMError(f"网络请求失败：{exc}") from exc
         if resp.status_code != 200:
@@ -167,13 +221,9 @@ class DeepSeekClient:
         chars = 0
         reasoning_chars = 0
         try:
-            resp = requests.post(
-                self.url,
-                headers=self._headers(),
-                json=self._payload(messages, stream=True),
-                timeout=self.timeout,
-                stream=True,
-            )
+            resp = self._post(self._payload(messages, stream=True), stream=True)
+        except LLMError:
+            raise
         except requests.RequestException as exc:
             raise LLMError(f"网络请求失败：{exc}") from exc
 

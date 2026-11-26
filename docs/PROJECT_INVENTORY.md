@@ -231,7 +231,7 @@ data/
 - `base_url`：`https://api.deepseek.com`
 - `model`：`deepseek-flash`
 - `max_tokens`（默认 4096，长回答会自动续写）、`temperature`
-- `save_captures`、`thinking`、`auto_memory`、`query_rewrite`、`summary_enabled`、`history_char_limit`、`history_keep_messages`、`embedding_enabled`、`embedding_model`、`embedding_cache_dir`、`model_mode`、`local_model`、`local_base_url`、`note_template`
+- `save_captures`、`thinking`、`auto_memory`、`query_rewrite`、`summary_enabled`、`history_char_limit`、`history_keep_messages`、`embedding_enabled`、`embedding_model`、`embedding_cache_dir`、`model_mode`、`local_model`、`local_base_url`、`bridge_port`、`http_retries`、`http_backoff`、`telemetry_enabled`、`note_template`
 - `hotkey_capture`、`pet_pos`、`pet_enabled`
 
 `config.example.json` 只保留空 Key 模板，可安全公开。

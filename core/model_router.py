@@ -49,6 +49,26 @@ class FallbackClient:
             LOGGER.exception("本地模型调用失败，回退云端")
         return self.fallback.chat_with_tools(messages, tools, tool_choice)
 
+    def stream_chat(self, messages, on_delta, stop_event=None):
+        chars = 0
+
+        def forward(text: str) -> None:
+            nonlocal chars
+            chars += len(text)
+            on_delta(text)
+
+        try:
+            result = self.primary.stream_chat(messages, forward, stop_event)
+            if chars:
+                return result
+            LOGGER.warning("本地流式返回空内容，回退云端")
+        except Exception:  # noqa: BLE001
+            if chars:
+                LOGGER.exception("本地流式中途失败，保留已输出内容")
+                return {"finish_reason": "error", "chars": chars}
+            LOGGER.exception("本地流式调用失败，回退云端")
+        return self.fallback.stream_chat(messages, on_delta, stop_event)
+
 
 class ModelRouter:
     def __init__(self, config: Config, local_client=None, cloud_client=None) -> None:
@@ -97,6 +117,8 @@ class ModelRouter:
             model=self.config.model,
             max_tokens=int(self.config.data.get("max_tokens", 4096)),
             temperature=float(self.config.data.get("temperature", 0.6)),
+            retries=int(self.config.data.get("http_retries", 2)),
+            backoff=float(self.config.data.get("http_backoff", 1.0)),
         )
 
     def _local_available(self) -> bool:

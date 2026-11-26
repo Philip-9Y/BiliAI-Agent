@@ -224,6 +224,8 @@ class MemoryManager:
             model=self.config.model,
             max_tokens=900,
             temperature=0.2,
+            retries=int(self.config.data.get("http_retries", 2)),
+            backoff=float(self.config.data.get("http_backoff", 1.0)),
         )
 
     @staticmethod

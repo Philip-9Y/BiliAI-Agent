@@ -129,6 +129,7 @@ class MainWindow(QWidget):
         self._active_sid = ""
         self._running_sid = ""
         self._live_bubble: dict | None = None
+        self._live_stream_text = ""
 
         self.setWindowTitle("B站学习助手 · 路飞")
         self.setWindowIcon(make_icon())
@@ -585,7 +586,20 @@ class MainWindow(QWidget):
             return
         self._set_running(True, sid)
         self._enable_composer(False)
+        self._live_stream_text = ""
         self._begin_live_bubble()
+
+    def agent_delta(self, sid: str, text: str) -> None:
+        if sid != self._active_sid or self._live_bubble is None or not text:
+            return
+        self._live_stream_text += text
+        body = self._live_bubble["body"]
+        try:
+            body.setTextFormat(Qt.PlainText)
+            body.setText(self._live_stream_text)
+        except RuntimeError:
+            pass
+        self._scroll_bottom()
 
     def agent_step(self, sid: str, step: dict) -> None:
         if sid != self._active_sid or self._live_bubble is None:

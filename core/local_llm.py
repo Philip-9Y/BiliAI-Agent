@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 
@@ -114,3 +115,51 @@ class OllamaClient:
             "content": content,
             "_finish_reason": "stop" if content else "length",
         }
+
+    def stream_chat(self, messages: list[dict], on_delta, stop_event=None) -> dict:
+        payload = {
+            "model": self.model,
+            "messages": self._flatten(messages),
+            "stream": True,
+            "keep_alive": self.keep_alive,
+            "options": {
+                "temperature": self.temperature,
+                "num_predict": self.max_tokens,
+                "num_ctx": self.num_ctx,
+            },
+        }
+        finish_reason = None
+        chars = 0
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=self.timeout,
+                stream=True,
+            )
+        except requests.RequestException as exc:
+            raise LLMError(f"本地模型连接失败：{exc}") from exc
+        with response:
+            if response.status_code != 200:
+                raise LLMError(f"本地模型 HTTP {response.status_code}：{response.text[:300]}")
+            for raw in response.iter_lines(decode_unicode=True):
+                if stop_event is not None and stop_event.is_set():
+                    return {"finish_reason": "stopped", "chars": chars}
+                if not raw:
+                    continue
+                if isinstance(raw, bytes):
+                    raw = raw.decode("utf-8", errors="replace")
+                try:
+                    data = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                message = data.get("message") or {}
+                text = message.get("content") or ""
+                if text:
+                    chars += len(text)
+                    on_delta(text)
+                if data.get("done"):
+                    finish_reason = data.get("done_reason") or "stop"
+                    break
+        return {"finish_reason": finish_reason or "stop", "chars": chars}
+

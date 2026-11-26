@@ -67,7 +67,7 @@ Agent 会自动调用：
 
 插件：`plugins/<name>/plugin.json` + `tool.py`，`tool.py` 里实现 `register(registry)`；也可以在「插件」里从文件夹或 zip 安装到 `data/plugins/`。插件是本地可执行代码，**只安装你信任的插件**。
 
-> B 站网页接口有风控（412），所以视频识别优先用“前台窗口标题”，需要详细信息时让 Agent 用 BV 号/链接查询。后续会加浏览器扩展直接拿 URL 和字幕。
+> B 站网页接口有风控（412），视频识别优先用“前台窗口标题”，同时可从浏览器扩展本地桥获取 URL、播放进度、字幕和选中文字。
 
 ## 记忆
 
@@ -92,6 +92,36 @@ Agent 会自动调用：
   ```
 - 模型缺失或加载失败时，自动回退到关键词检索，App 不会打不开
 - 可在「设置 → 启用本地语义记忆」关闭
+
+## P0 工程能力
+
+### 浏览器扩展 / 本地桥
+
+- 扩展目录：`extension/`
+- 本地桥：`http://127.0.0.1:8765`
+- 上报：当前页面 URL、标题、视频进度、字幕、选中文字
+- App 只在最近 20 秒内有上报时采用
+- 安装：Chrome/Edge 打开 `chrome://extensions` → 开发者模式 → 加载已解压的扩展 → 选择 `extension/`
+- 详见 `extension/README.md`
+
+### 流式回答
+
+- 简单纯文字问答：逐字流式显示（本地/云端都支持）
+- 截图、工具调用、复杂任务：保持原有 Agent 工具循环，最后一次性渲染
+- 本地流式失败会自动回退云端
+
+### 可观测性 + 任务级评测
+
+- 每次运行写入 `data/metrics.jsonl`：状态、路由、耗时、字符数、工具数
+- 不记录问题正文、答案正文和截图
+- 任务级评测：`python scripts/eval_tasks.py`
+- 测试集：`eval/tasks.json`
+
+### Windows 打包
+
+- 一键构建目录：`powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1`
+- Inno Setup 安装包模板：`scripts/Study-AI.iss`
+- 打包后 `config.json`、`data/`、`models/` 都在 exe 同目录
 
 ## 本地 / 云端模型路由
 
@@ -159,7 +189,7 @@ Study-AI/
 ## 测试
 
 ```powershell
-# 63 项单元 + 交互流程测试（离屏，不弹窗）
+# 68 项单元 + 交互流程测试（离屏，不弹窗）
 python -m unittest discover -s tests -t . -v
 
 # 真实 API 连通性（发合成图，产生极少量 token 费用）
@@ -203,7 +233,7 @@ python tests/render_screenshots.py
 
 ## 下一步（按优先级）
 
-- [ ] 浏览器扩展/本地桥：稳定拿到视频 URL、字幕、进度
+- [x] 浏览器扩展/本地桥：基础版已接入 URL、进度、字幕、选中文字
 - [ ] 更多工具：Word/WPS 插入截图与图注、Excel、浏览器查资料、Python 沙箱
 - [ ] 笔记增强：Markdown 预览、双链、标签筛选、复习提醒
 - [ ] B 站字幕抓取 + 最近 30 秒缓冲

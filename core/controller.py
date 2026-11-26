@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 
@@ -11,11 +12,12 @@ from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from core.capture import crop_image, grab_primary_screen
-from core.config import Config
+from core.config import DATA_DIR, Config
 from core.context import ContextWatcher, get_foreground_context
 from core.conversation import ConversationAgent
 from core.memory import MemoryManager
 from core.store import Store
+from core.telemetry import Telemetry
 from ui.capture_overlay import CaptureOverlay
 from ui.main_window import MainWindow
 from ui.question_dialog import QuestionDialog
@@ -44,6 +46,7 @@ class Controller(QObject):
         main_window: MainWindow,
         agent: ConversationAgent,
         context_watcher: ContextWatcher | None = None,
+        bridge=None,
         question_provider=None,
         parent=None,
     ) -> None:
@@ -53,7 +56,11 @@ class Controller(QObject):
         self.main = main_window
         self.agent = agent
         self.context_watcher = context_watcher
+        self.bridge = bridge
         self.memory = agent.memory or MemoryManager(store, config)
+        self.telemetry = Telemetry(
+            DATA_DIR, enabled=bool(config.data.get("telemetry_enabled", True))
+        )
         self._question_provider = question_provider or self._ask_question
 
         self._capturing = False
@@ -77,6 +84,7 @@ class Controller(QObject):
 
         self.agent.started.connect(self._on_agent_started)
         self.agent.step.connect(self._on_agent_step)
+        self.agent.delta.connect(self.main.agent_delta)
         self.agent.finished.connect(self._on_agent_finished)
         self.agent.failed.connect(self._on_agent_failed)
         self.agent.confirmation_requested.connect(self._on_confirmation)
@@ -174,6 +182,26 @@ class Controller(QObject):
             return dialog.question()
         return None
 
+    # ------------------------------------------------------------------ 上下文
+    def _collect_context(self, pending=None) -> str:
+        """窗口标题 + 浏览器扩展上报的 URL/字幕/进度，合并成上下文。"""
+        parts: list[str] = []
+        context = pending
+        if context is None and self.context_watcher is not None:
+            context = self.context_watcher.best()
+        if context is not None:
+            text = context.prompt_text()
+            if text:
+                parts.append(text)
+        if self.bridge is not None:
+            try:
+                bridge_text = self.bridge.context_text(max_age=20)
+                if bridge_text:
+                    parts.append(bridge_text)
+            except Exception:  # noqa: BLE001
+                LOGGER.exception("读取浏览器桥上下文失败")
+        return "\n\n".join(parts)
+
     # ------------------------------------------------------------------ 提交
     def _submit_screenshot(self, question: str, crop: Image.Image) -> None:
         if not self.config.api_key:
@@ -192,7 +220,7 @@ class Controller(QObject):
         image_rel = None
         if self.config.data.get("save_captures", True):
             image_rel = self.store.save_capture(crop, when)
-        context_text = self._pending_context.prompt_text() if self._pending_context else ""
+        context_text = self._collect_context(self._pending_context)
 
         # 当前已有对话：把这次截图作为该对话的下一轮，保留上下文
         if active_sid and self.store.get_session(active_sid):
@@ -225,9 +253,7 @@ class Controller(QObject):
             self.toast.emit("这个会话还在生成，请稍候")
             return
         if not sid:
-            context_text = ""
-            if self.context_watcher is not None:
-                context_text = self.context_watcher.best().prompt_text()
+            context_text = self._collect_context()
             sid = self.store.create_session(
                 text,
                 None,
@@ -253,7 +279,33 @@ class Controller(QObject):
         self.main.refresh_history()
         self.main.refresh_notes()
         self.answer_finished.emit(sid)
+        self._record_run(sid, "ok", text)
         self._maybe_auto_memory(sid)
+
+    def _record_run(self, sid: str, status: str, text: str = "") -> None:
+        try:
+            messages = self.store.get_messages(sid)
+            assistant = next(
+                (row for row in reversed(messages) if row["role"] == "assistant"), None
+            )
+            steps = []
+            if assistant and assistant.get("meta"):
+                try:
+                    steps = json.loads(assistant["meta"]).get("steps") or []
+                except (TypeError, ValueError):
+                    steps = []
+            self.telemetry.record(
+                "run",
+                session=sid[:12],
+                status=status,
+                route=getattr(self.agent, "last_route", ""),
+                elapsed_s=(assistant or {}).get("elapsed_s"),
+                chars=len(text or ""),
+                tools=sum(1 for step in steps if step.get("type") == "tool_call"),
+                streamed=bool(assistant and assistant.get("meta") and "streamed" in str(assistant["meta"])),
+            )
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("记录运行指标失败")
 
     def _maybe_auto_memory(self, sid: str) -> None:
         """对话达到一定长度后，在后台自动提取一次长期记忆。"""
@@ -299,6 +351,7 @@ class Controller(QObject):
         self.main.agent_failed(sid, message)
         self.main.refresh_history()
         self.answer_failed.emit(sid, message)
+        self._record_run(sid, "error", "")
 
     def _on_confirmation(self, request_id: str, tool: str, args_json: str) -> None:
         preview = args_json if len(args_json) <= 500 else args_json[:500] + "…"

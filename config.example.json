@@ -22,5 +22,9 @@
   "local_temperature": 0.6,
   "local_num_ctx": 4096,
   "local_keep_alive": "10m",
-  "auto_local_max_chars": 300
+  "auto_local_max_chars": 300,
+  "http_retries": 2,
+  "http_backoff": 1.0,
+  "bridge_port": 8765,
+  "telemetry_enabled": true
 }

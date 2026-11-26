@@ -42,6 +42,7 @@ CHAT_SYSTEM_PROMPT = """你是一个桌面学习助手 + 可以调用工具的 A
 class ConversationAgent(QObject):
     started = Signal(str)
     step = Signal(str, dict)
+    delta = Signal(str, str)
     finished = Signal(str, str)
     failed = Signal(str, str)
     confirmation_requested = Signal(str, str, str)
@@ -129,6 +130,8 @@ class ConversationAgent(QObject):
                 model=self.config.model,
                 max_tokens=int(self.config.data.get("max_tokens", 4096)),
                 temperature=float(self.config.data.get("temperature", 0.6)),
+                retries=int(self.config.data.get("http_retries", 2)),
+                backoff=float(self.config.data.get("http_backoff", 1.0)),
             )
 
     def _prepare_history(self, sid: str, session: dict, rows: list[dict], client):
@@ -301,6 +304,24 @@ class ConversationAgent(QObject):
             return question
         return rewritten
 
+    def _stream_allowed(self, sid: str, client, task: str) -> bool:
+        if self._llm_factory is not None or task:
+            return False
+        if not hasattr(client, "stream_chat"):
+            return False
+        session = self.store.get_session(sid) or {}
+        if session.get("image_path"):
+            return False
+        rows = self.store.get_messages(sid)
+        if any(row.get("image_path") for row in rows):
+            return False
+        question = ""
+        for row in reversed(rows):
+            if row["role"] == "user":
+                question = row["content"] or ""
+                break
+        return self.model_router.is_simple(question)
+
     def _run(self, sid: str, task: str, stop_event: threading.Event) -> None:
         started = time.time()
         steps: list[dict] = []
@@ -310,6 +331,37 @@ class ConversationAgent(QObject):
             if task:
                 messages.append({"role": "user", "content": task})
             tools = self.registry.specs()
+
+            # 简单纯文字问答直接流式输出；工具/截图仍走下面的 Agent 循环
+            if self._stream_allowed(sid, client, task):
+                parts: list[str] = []
+                result = {}
+                try:
+                    result = client.stream_chat(
+                        messages, lambda chunk: (parts.append(chunk), self.delta.emit(sid, chunk)), stop_event
+                    )
+                except Exception:  # noqa: BLE001
+                    LOGGER.exception("流式回答失败，回退普通流程")
+                if stop_event.is_set():
+                    self.failed.emit(sid, "已停止")
+                    return
+                if parts:
+                    final_text = "".join(parts).strip()
+                    if result.get("finish_reason") == "length":
+                        final_text += (
+                            "\n\n> ⚠️ 回答达到模型长度上限，可能未完整。"
+                            "可以在设置里调大「最大回复 tokens」。"
+                        )
+                    elapsed = round(time.time() - started, 2)
+                    self.store.add_message(
+                        sid,
+                        "assistant",
+                        final_text,
+                        elapsed_s=elapsed,
+                        meta=json.dumps({"streamed": True}, ensure_ascii=False),
+                    )
+                    self.finished.emit(sid, final_text)
+                    return
 
             final_parts: list[str] = []
             continuations = 0

@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Study-AI Browser Bridge",
+  "version": "1.0.0",
+  "description": "把当前 B 站/YouTube 页面标题、URL、播放进度、字幕和选中文字发送给本地 Study-AI。",
+  "permissions": ["activeTab", "tabs", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "*://*.bilibili.com/*",
+    "*://*.youtube.com/*"
+  ],
+  "action": {
+    "default_title": "Study-AI Bridge",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.bilibili.com/*", "*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

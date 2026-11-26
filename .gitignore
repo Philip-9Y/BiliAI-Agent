@@ -6,3 +6,6 @@ backup/
 .idea/
 .vscode/
 models/
+build/
+dist/
+*.spec
