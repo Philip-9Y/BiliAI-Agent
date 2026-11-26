@@ -70,7 +70,6 @@ Get-CimInstance Win32_Process |
 主窗口隐藏到托盘后：
 
 - 双击桌宠
-- `Ctrl+Alt+H`
 - 托盘菜单「打开主界面」
 - 桌面快捷方式（已修复单实例唤醒竞态）
 

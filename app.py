@@ -3,8 +3,7 @@
     python app.py           启动
     python app.py --check   自检（热键注册 + 启动退出）
 
-热键：Ctrl+Alt+Q 截图提问 / Ctrl+Alt+Shift+A 对话 / Ctrl+Alt+H 主界面 /
-      Ctrl+Alt+S 唤醒助手 / Ctrl+Alt+Shift+P 设置 / Ctrl+Alt+Shift+X 退出
+热键：只保留 Ctrl+Alt+Q 截图提问；打开/设置/退出走托盘、桌宠或桌面快捷方式。
 """
 
 from __future__ import annotations
@@ -176,11 +175,6 @@ def main() -> int:
     def show_main() -> None:
         main_window.show_and_raise()
 
-    def show_chat() -> None:
-        main_window.show_and_raise()
-        main_window.show_chat()
-        main_window.composer.setFocus()
-
     def sync_pet_action(enabled: bool) -> None:
         act_pet.blockSignals(True)
         act_pet.setChecked(enabled)
@@ -323,7 +317,7 @@ def main() -> int:
             balloon_shown["value"] = True
             tray.showMessage(
                 "仍在后台运行",
-                "双击桌宠截图提问 · Ctrl+Alt+H 打开主界面 · Ctrl+Alt+Shift+A 对话",
+                "双击桌宠或 Ctrl+Alt+Q 截图提问 · 托盘菜单打开/设置/退出",
                 QSystemTrayIcon.Information,
                 3000,
             )
@@ -362,16 +356,6 @@ def main() -> int:
                 action = event[1]
                 if action == 1:
                     controller.start_capture()
-                elif action == 2:
-                    show_main()
-                elif action == 3:
-                    show_chat()
-                elif action == 4:
-                    quit_app()
-                elif action == 5:
-                    show_chat()
-                elif action == 6:
-                    controller.open_settings()
             elif kind == "hotkeys_ready":
                 LOGGER.info("全局热键注册成功")
             elif kind == "hotkey_fallback":

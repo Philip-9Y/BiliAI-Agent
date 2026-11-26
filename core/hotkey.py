@@ -19,19 +19,9 @@ WM_HOTKEY = 0x0312
 WM_QUIT = 0x0012
 
 VK_Q = 0x51
-VK_S = 0x53
-VK_H = 0x48
-VK_X = 0x58
-VK_A = 0x41
-VK_P = 0x50
 
 DEFAULT_BINDINGS = {
     1: (MOD_CONTROL | MOD_ALT, VK_Q, "Ctrl+Alt+Q"),
-    2: (MOD_CONTROL | MOD_ALT, VK_H, "Ctrl+Alt+H"),
-    3: (MOD_CONTROL | MOD_ALT, VK_S, "Ctrl+Alt+S"),
-    4: (MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_X, "Ctrl+Alt+Shift+X"),
-    5: (MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_A, "Ctrl+Alt+Shift+A"),
-    6: (MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_P, "Ctrl+Alt+Shift+P"),
 }
 
 _user32 = ctypes.WinDLL("user32", use_last_error=True)

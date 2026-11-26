@@ -794,7 +794,6 @@ app.py
 - 无 GUI 自检：`python app.py --check` → `data/selfcheck.json`
 - 用户/内置插件进程沙箱：`core/sandbox.py`、`core/sandbox_worker.py`
 - ANN 记忆召回：`core/ann.py`（随机超平面 LSH，阈值 `ann_threshold`）
-- 退出热键：`Ctrl+Alt+Shift+X`
 - 浏览器桥：`core/bridge.py` + `extension/`
 - 本地/云端路由：`core/model_router.py`、`core/local_llm.py`
 - 可观测性：`core/telemetry.py`、`data/metrics.jsonl`
