@@ -1,6 +1,21 @@
-# Study-AI（B站学习助手）· 对话式 Agent 桌面版
+# BiliAI-Agent
+
+### Bilibili 学习桌面 AI Agent
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white)
+![Agent](https://img.shields.io/badge/Agent-tool--calling-7C3AED)
+![Stars](https://img.shields.io/github/stars/Philip-9Y/BiliAI-Agent?style=social)
+
+> **GitHub 仓库名：`BiliAI-Agent`**  
+> 本地目录/可执行文件仍保留 `Study-AI`，避免旧快捷方式、`data/`、安装路径失效。  
+> 非 B 站官方项目，仅个人学习工具。
 
 一个长在桌面上的学习 Agent：**直接对话让它做事**，或双击路飞桌宠截图问视频内容。工具调用以卡片形式出现在对话里，笔记单独管理、随时可改。
+
+**English:** BiliAI-Agent is a Windows desktop AI learning agent for Bilibili: screenshot Q&A, long-term memory, notes, Word automation, browser context bridge, local Ollama + cloud DeepSeek routing. It is an unofficial personal project, not affiliated with Bilibili.
+
 
 ![主界面](assets/screenshot_main.png)
 
@@ -194,6 +209,16 @@ powershell -ExecutionPolicy Bypass -File scripts/sign_windows.ps1 -CreateSelfSig
 ```
 
 生产分发请使用受信任的 OV/EV 代码签名证书。
+
+## 为什么叫 BiliAI-Agent
+
+- **Bili**：B站/视频学习场景
+- **AI**：云端 DeepSeek + 本地 Ollama + BGE 语义记忆
+- **Agent**：截图、工具调用、笔记、记忆、Word 的桌面工作流
+
+本地目录仍叫 `Study-AI`，这是历史路径兼容名；GitHub 仓库已改为 `BiliAI-Agent`。
+
+如果这个项目对你有帮助，欢迎点一个 ⭐ Star，让更多 B 站学习者看到。
 
 ## 快速开始
 

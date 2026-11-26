@@ -24,6 +24,29 @@
 
 ---
 
+### 0. GitHub 品牌升级为 BiliAI-Agent
+
+**场景**：仓库名 `Study-AI` 太泛，搜索时不容易同时命中 Bilibili、AI、Agent。
+
+**现在**：
+
+- GitHub 仓库改名为 **`BiliAI-Agent`**
+- 显示名：**Bili AI Agent**
+- 简介：Bilibili 学习桌面 AI Agent
+- Topics：`bilibili`、`ai-agent`、`llm`、`desktop-app`、`pyside6`、`rag`、`ollama`、`study-assistant`、`windows`、`python`、`deepseek`
+- 旧 `Study-AI` 链接由 GitHub 自动跳转
+- 本地目录/EXE 仍叫 `Study-AI`，避免快捷方式、data 路径断裂
+
+**名称拆解**：
+
+- Bili：B站/视频学习
+- AI：DeepSeek + Ollama + BGE
+- Agent：截图、工具、记忆、笔记、Word
+
+**限制**：非 B站官方项目；不要用官方 Logo/名义宣传。
+
+---
+
 ### 0. 安装包补齐内置插件并完成今日收尾
 
 **场景**：安装版打开了，但内置插件缺失，插件沙箱也不启动。
