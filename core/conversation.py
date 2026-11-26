@@ -65,6 +65,8 @@ class ConversationAgent(QObject):
         self._llm_factory = llm_factory
         self.model_router = model_router or ModelRouter(config)
         self.last_route = ""
+        self.last_memory_count = 0
+        self.last_tool_count = 0
         self.max_steps = max_steps
         self._runs: dict[str, threading.Event] = {}
         self._stop_events: dict[str, threading.Event] = {}
@@ -211,6 +213,9 @@ class ConversationAgent(QObject):
         if self.memory is not None and retrieval_question:
             memory_text = self.memory.build_context(retrieval_question, prior_questions)
             if memory_text:
+                self.last_memory_count = sum(
+                    1 for line in memory_text.splitlines() if line.startswith("- ")
+                )
                 system += (
                     "\n\n【用户的长期记忆（可能相关，参考即可；无关就忽略）】\n" + memory_text
                 )
@@ -321,12 +326,32 @@ class ConversationAgent(QObject):
                 break
         return self.model_router.is_simple(question)
 
+    def _route_label(self) -> str:
+        labels = {
+            "cloud:screenshot": "云端视觉模型 · 截图",
+            "cloud:manual": "云端 · 手动",
+            "cloud:auto": "云端 · 自动",
+            "cloud:local-unavailable": "云端 · 本地不可用",
+            "cloud:local-tool": "云端 · 本地优先但工具任务",
+            "local:auto": "本地 Ollama · 自动",
+            "local:manual": "本地 Ollama · 手动",
+        }
+        return labels.get(self.last_route, self.last_route or "未知")
+
+    def _status(self, sid: str, steps: list[dict], text: str) -> None:
+        steps.append({"type": "status", "text": text})
+        self.step.emit(sid, {"type": "status", "text": text})
+
     def _run(self, sid: str, task: str, stop_event: threading.Event) -> None:
         started = time.time()
         steps: list[dict] = []
+        self.last_memory_count = 0
+        self.last_tool_count = 0
         try:
             client = self._make_client(sid)
+            self._status(sid, steps, f"模型路由：{self._route_label()}")
             messages = self._build_messages(sid, client=client)
+            self._status(sid, steps, f"记忆检索：命中 {self.last_memory_count} 条")
             if task:
                 messages.append({"role": "user", "content": task})
             tools = self.registry.specs()
@@ -352,12 +377,19 @@ class ConversationAgent(QObject):
                             "可以在设置里调大「最大回复 tokens」。"
                         )
                     elapsed = round(time.time() - started, 2)
+                    self._status(
+                        sid,
+                        steps,
+                        f"完成：流式 · {elapsed}s · 工具 {self.last_tool_count} 次",
+                    )
                     self.store.add_message(
                         sid,
                         "assistant",
                         final_text,
                         elapsed_s=elapsed,
-                        meta=json.dumps({"streamed": True}, ensure_ascii=False),
+                        meta=json.dumps(
+                            {"steps": steps, "streamed": True}, ensure_ascii=False
+                        ),
                     )
                     self.finished.emit(sid, final_text)
                     return
@@ -418,6 +450,11 @@ class ConversationAgent(QObject):
                             "可以在设置里调大「最大回复 tokens」。"
                         )
                     elapsed = round(time.time() - started, 2)
+                    self._status(
+                        sid,
+                        steps,
+                        f"完成：{self._route_label()} · {elapsed}s · 工具 {self.last_tool_count} 次",
+                    )
                     meta_data: dict = {"steps": steps}
                     if truncated:
                         meta_data["truncated"] = True
@@ -459,6 +496,7 @@ class ConversationAgent(QObject):
                     steps.append(
                         {"type": "tool_call", "name": name, "args": arguments}
                     )
+                    self.last_tool_count += 1
 
                     if self._needs_confirmation(name) and not self._ask_confirmation(name, arguments):
                         result_text = "用户拒绝了这次操作，请换一种方式或询问用户。"

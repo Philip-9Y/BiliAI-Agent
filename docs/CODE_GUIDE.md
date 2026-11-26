@@ -138,6 +138,7 @@ Ctrl+Alt+Q / 桌宠双击
 | `_summarize_history` | 调 LLM 生成/合并摘要 |
 | `_rewrite_query` | 模糊追问改写成完整检索问题 |
 | `_stream_allowed` | 简单无图纯文字才流式 |
+| `_status` | 发“模型路由/记忆命中/完成”状态卡 |
 | `_run` | 流式分支 / 工具循环 / 截断续写 / 保存 |
 | `_ask_confirmation` | 危险工具等待用户确认，最长 90 秒 |
 
@@ -306,6 +307,17 @@ for step in range(8):
 
 `ConversationAgent.delta` → `MainWindow.agent_delta` → 纯文本逐段追加；  
 `finished` 后用 `render_answer` 渲染 Markdown/公式。
+
+### 运行状态
+
+`ConversationAgent._status` 把以下步骤写入 `steps` 和消息 meta：
+
+- 模型路由；
+- 记忆命中数；
+- 完成耗时和工具次数。
+
+`MainWindow._add_step_card` 遇到 `type=status` 时渲染为 `RunStatus` 小标签；
+历史会话通过 `_parse_steps(meta)` 回放。
 
 ---
 

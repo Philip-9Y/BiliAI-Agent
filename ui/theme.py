@@ -252,6 +252,14 @@ QFrame#ToolResult {
     border-radius: 8px;
 }
 QLabel#ToolTitle { color: #374151; font-size: 11px; }
+QLabel#RunStatus {
+    color: #4b5563;
+    background: #f3f6fb;
+    border: 1px solid #e2e8f3;
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 10px;
+}
 QLabel#ToolDetail {
     color: #6b7280;
     font-size: 11px;

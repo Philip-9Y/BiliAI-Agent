@@ -713,7 +713,15 @@ class MainWindow(QWidget):
 
     def _add_step_card(self, layout: QVBoxLayout, step: dict) -> None:
         kind = step.get("type")
-        if kind == "tool_call":
+        if kind == "status":
+            text = _escape(str(step.get("text") or ""))
+            if text:
+                label = QLabel(text)
+                label.setObjectName("RunStatus")
+                label.setTextFormat(Qt.PlainText)
+                label.setWordWrap(True)
+                layout.addWidget(label)
+        elif kind == "tool_call":
             name = _escape(step.get("name") or "")
             args = json.dumps(step.get("args") or {}, ensure_ascii=False)
             if len(args) > 240:
