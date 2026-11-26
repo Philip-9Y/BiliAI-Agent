@@ -53,15 +53,40 @@ class FallbackClient:
 class ModelRouter:
     def __init__(self, config: Config, local_client=None, cloud_client=None) -> None:
         self.config = config
-        self._local = local_client or OllamaClient(
-            base_url=str(config.data.get("local_base_url") or "http://127.0.0.1:11434"),
-            model=str(config.data.get("local_model") or "qwen2.5-3b:latest"),
-            max_tokens=int(config.data.get("local_max_tokens", 1024)),
-            temperature=float(config.data.get("local_temperature", 0.6)),
-            num_ctx=int(config.data.get("local_num_ctx", 4096)),
-            keep_alive=str(config.data.get("local_keep_alive") or "10m"),
-        )
+        self._local_injected = local_client is not None
+        self._local = local_client or self._new_local()
+        self._local_signature = self._current_local_signature()
         self._cloud = cloud_client
+
+    def _new_local(self) -> OllamaClient:
+        return OllamaClient(
+            base_url=str(self.config.data.get("local_base_url") or "http://127.0.0.1:11434"),
+            model=str(self.config.data.get("local_model") or "qwen2.5-3b:latest"),
+            max_tokens=int(self.config.data.get("local_max_tokens", 1024)),
+            temperature=float(self.config.data.get("local_temperature", 0.6)),
+            num_ctx=int(self.config.data.get("local_num_ctx", 4096)),
+            keep_alive=str(self.config.data.get("local_keep_alive") or "10m"),
+        )
+
+    def _current_local_signature(self) -> tuple:
+        return (
+            str(self.config.data.get("local_base_url") or ""),
+            str(self.config.data.get("local_model") or ""),
+            int(self.config.data.get("local_max_tokens", 1024)),
+            float(self.config.data.get("local_temperature", 0.6)),
+            int(self.config.data.get("local_num_ctx", 4096)),
+            str(self.config.data.get("local_keep_alive") or "10m"),
+        )
+
+    def _current_local(self):
+        """配置里本地模型被手动切换后，立即创建新客户端，不需要重启。"""
+        if self._local_injected:
+            return self._local
+        signature = self._current_local_signature()
+        if signature != self._local_signature:
+            self._local = self._new_local()
+            self._local_signature = signature
+        return self._local
 
     def cloud_client(self):
         if self._cloud is not None:
@@ -76,7 +101,7 @@ class ModelRouter:
 
     def _local_available(self) -> bool:
         try:
-            return bool(self._local.available())
+            return bool(self._current_local().available())
         except Exception:  # noqa: BLE001
             LOGGER.exception("检查本地模型失败")
             return False
@@ -105,8 +130,8 @@ class ModelRouter:
 
         if mode == "local":
             if self.is_simple(question):
-                return FallbackClient(self._local, cloud), "local:manual"
+                return FallbackClient(self._current_local(), cloud), "local:manual"
             return cloud, "cloud:local-tool"
         if self.is_simple(question):
-            return FallbackClient(self._local, cloud), "local:auto"
+            return FallbackClient(self._current_local(), cloud), "local:auto"
         return cloud, "cloud:auto"

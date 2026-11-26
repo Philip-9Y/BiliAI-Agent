@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.config import Config
+from core.local_llm import OllamaClient
 from core.store import Store
 from ui.answer_render import render_answer, render_stream_text
 from ui.memory_pane import MemoryPane
@@ -278,8 +280,10 @@ class MainWindow(QWidget):
         title_box.addWidget(self.context_label)
         self.status_label = QLabel("")
         self.status_label.setObjectName("Status")
-        self.model_label = QLabel(self.config.model)
+        self.model_label = QPushButton("自动路由")
         self.model_label.setObjectName("ModelChip")
+        self.model_label.setCursor(Qt.PointingHandCursor)
+        self.model_label.clicked.connect(self._show_model_menu)
         self.note_btn = QPushButton("存为笔记")
         self.note_btn.setObjectName("Ghost")
         self.note_btn.clicked.connect(self.note_from_last)
@@ -455,9 +459,84 @@ class MainWindow(QWidget):
         self.model_label.setText(labels.get(mode, "自动路由"))
         local_model = str(self.config.data.get("local_model") or "qwen2.5-3b:latest")
         self.model_label.setToolTip(
+            f"点击切换模型模式/本地模型/云端模型\n"
             f"云端：{self.config.model}\n本地：{local_model}\n"
             "自动模式下，简单问答走本地，截图和工具走云端"
         )
+
+    def _show_model_menu(self) -> None:
+        menu = QMenu(self)
+        current_mode = str(self.config.data.get("model_mode") or "auto")
+        for key, label in (
+            ("auto", "自动：简单问答本地，其余云端"),
+            ("local", "本地优先：简单问答本地，工具/截图云端"),
+            ("cloud", "仅云端：全部使用 DeepSeek"),
+        ):
+            action = menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(current_mode == key)
+            action.triggered.connect(
+                lambda _checked=False, mode=key: self._set_model_mode(mode)
+            )
+
+        menu.addSeparator()
+        local_menu = menu.addMenu("切换本地模型")
+        current_local = str(self.config.data.get("local_model") or "qwen2.5-3b:latest")
+        base_url = str(self.config.data.get("local_base_url") or "http://127.0.0.1:11434")
+        models = OllamaClient.list_models(base_url) or []
+        for name in ("qwen2.5-3b:latest", "qwen2.5-3b-cpu:latest", "qwen3.5:4b"):
+            if name not in models:
+                models.append(name)
+        if current_local and current_local not in models:
+            models.insert(0, current_local)
+        for name in models:
+            action = local_menu.addAction(name)
+            action.setCheckable(True)
+            action.setChecked(name == current_local)
+            action.triggered.connect(
+                lambda _checked=False, model=name: self._set_local_model(model)
+            )
+        local_menu.addSeparator()
+        local_menu.addAction("刷新/更多本地模型…", self.settings_requested.emit)
+
+        cloud_menu = menu.addMenu("切换云端模型")
+        current_cloud = self.config.model
+        cloud_models = ["deepseek-flash", "deepseek-pro"]
+        if current_cloud not in cloud_models:
+            cloud_models.insert(0, current_cloud)
+        for name in cloud_models:
+            action = cloud_menu.addAction(name)
+            action.setCheckable(True)
+            action.setChecked(name == current_cloud)
+            action.triggered.connect(
+                lambda _checked=False, model=name: self._set_cloud_model(model)
+            )
+
+        menu.addSeparator()
+        menu.addAction("打开完整设置…", self.settings_requested.emit)
+        menu.exec(self.model_label.mapToGlobal(self.model_label.rect().bottomLeft()))
+
+    def _set_model_mode(self, mode: str) -> None:
+        self.config.data["model_mode"] = mode
+        self.config.save()
+        self.refresh_model_label()
+        self.status_label.setText(
+            {"auto": "已切换：自动路由", "local": "已切换：本地优先", "cloud": "已切换：仅云端"}.get(
+                mode, "已切换模型模式"
+            )
+        )
+
+    def _set_local_model(self, model: str) -> None:
+        self.config.data["local_model"] = model
+        self.config.save()
+        self.refresh_model_label()
+        self.status_label.setText(f"已切换本地模型：{model}")
+
+    def _set_cloud_model(self, model: str) -> None:
+        self.config.data["model"] = model
+        self.config.save()
+        self.refresh_model_label()
+        self.status_label.setText(f"已切换云端模型：{model}")
 
     def show_empty(self) -> None:
         self._active_sid = ""

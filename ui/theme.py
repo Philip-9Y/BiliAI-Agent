@@ -197,13 +197,21 @@ QLabel#ContextChip {
     padding: 2px 8px;
     font-size: 10px;
 }
-QLabel#ModelChip {
+QLabel#ModelChip, QPushButton#ModelChip {
     color: #1d4ed8;
     background: #eaf1ff;
     border: 1px solid #d5e2ff;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 10px;
+    text-align: left;
+}
+QPushButton#ModelChip:hover {
+    background: #dbe8ff;
+    border-color: #b8cdfb;
+}
+QPushButton#ModelChip:pressed {
+    background: #cddfff;
 }
 QTextBrowser#AgentLog {
     background: #ffffff;
