@@ -128,6 +128,8 @@
 
 - 退出改为 `Ctrl+Alt+Shift+X`
 - 对话改为 `Ctrl+Alt+Shift+A`
+- `Ctrl+Alt+S` 改为唤醒助手/对话，不再打开设置
+- 设置改到 `Ctrl+Alt+Shift+P`
 - 任一原热键失败时，自动尝试加 `Shift` 的备用键
 - 一个键失败不会注销其他热键
 - 托盘会提示“已自动切换”

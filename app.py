@@ -4,7 +4,7 @@
     python app.py --check   自检（热键注册 + 启动退出）
 
 热键：Ctrl+Alt+Q 截图提问 / Ctrl+Alt+Shift+A 对话 / Ctrl+Alt+H 主界面 /
-      Ctrl+Alt+S 设置 / Ctrl+Alt+Shift+X 退出
+      Ctrl+Alt+S 唤醒助手 / Ctrl+Alt+Shift+P 设置 / Ctrl+Alt+Shift+X 退出
 """
 
 from __future__ import annotations
@@ -365,11 +365,13 @@ def main() -> int:
                 elif action == 2:
                     show_main()
                 elif action == 3:
-                    controller.open_settings()
+                    show_chat()
                 elif action == 4:
                     quit_app()
                 elif action == 5:
                     show_chat()
+                elif action == 6:
+                    controller.open_settings()
             elif kind == "hotkeys_ready":
                 LOGGER.info("全局热键注册成功")
             elif kind == "hotkey_fallback":

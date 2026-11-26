@@ -238,7 +238,8 @@ python app.py
 | `Ctrl+Alt+Q` | 截图提问 |
 | `Ctrl+Alt+Shift+A` | 打开对话并聚焦输入框 |
 | `Ctrl+Alt+H` | 打开主界面 |
-| `Ctrl+Alt+S` | 设置 |
+| `Ctrl+Alt+S` | 唤醒助手（对话） |
+| `Ctrl+Alt+Shift+P` | 设置 |
 | `Ctrl+Alt+Shift+X` | 退出 |
 
 关闭主窗口 = 最小化到托盘；退出用托盘菜单或 `Ctrl+Alt+Shift+X`。
