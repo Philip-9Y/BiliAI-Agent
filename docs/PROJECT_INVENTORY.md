@@ -302,3 +302,19 @@ python -c "import sqlite3; c=sqlite3.connect('data/bili_ask.db'); print({t:c.exe
 ## 16. 一句话总结
 
 **GitHub 上是“可公开的源代码 + 文档 + 资源”；本地 `config.json` 和 `data/` 是“你的私人 Key + 学习数据”。这两类内容刻意分开，是安全设计，不是隐藏。**
+
+---
+
+## 2026-11 新增能力（与 README 同步）
+
+- 无 GUI 自检：`python app.py --check` → `data/selfcheck.json`
+- 用户/内置插件进程沙箱：`core/sandbox.py`、`core/sandbox_worker.py`
+- ANN 记忆召回：`core/ann.py`（随机超平面 LSH，阈值 `ann_threshold`）
+- 退出热键：`Ctrl+Alt+Shift+X`
+- 浏览器桥：`core/bridge.py` + `extension/`
+- 本地/云端路由：`core/model_router.py`、`core/local_llm.py`
+- 可观测性：`core/telemetry.py`、`data/metrics.jsonl`
+- 代码签名：`scripts/sign_windows.ps1`
+- 算法说明：`docs/ALGORITHMS.md`
+- 改进清单：`docs/IMPROVEMENTS.md`
+

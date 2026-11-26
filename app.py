@@ -3,8 +3,8 @@
     python app.py           启动
     python app.py --check   自检（热键注册 + 启动退出）
 
-热键：Ctrl+Alt+Q 截图提问 / Ctrl+Alt+A 对话 / Ctrl+Alt+H 主界面 /
-      Ctrl+Alt+S 设置 / Ctrl+Alt+X 退出
+热键：Ctrl+Alt+Q 截图提问 / Ctrl+Alt+Shift+A 对话 / Ctrl+Alt+H 主界面 /
+      Ctrl+Alt+S 设置 / Ctrl+Alt+Shift+X 退出
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from core.config import APP_DIR, DATA_DIR, Config
 from core.context import ContextWatcher
 from core.controller import Controller
 from core.conversation import ConversationAgent
-from core.hotkey import MOD_ALT, MOD_CONTROL, VK_A, VK_H, VK_Q, VK_S, VK_X, HotkeyManager
+from core.hotkey import DEFAULT_BINDINGS, HotkeyManager
 from core.memory import MemoryManager
 from core.plugins import PluginManager
 from core.store import Store
@@ -50,21 +50,6 @@ def setup_logging() -> None:
         stream_handler.setFormatter(fmt)
         handlers.append(stream_handler)
     logging.basicConfig(level=logging.INFO, handlers=handlers)
-
-
-def _check_output(text: str) -> None:
-    """--check 输出：windowed exe 没有 stdout，写文件兜底。"""
-    try:
-        if sys.stdout is not None:
-            print(text, flush=True)
-    except Exception:
-        pass
-    try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with (DATA_DIR / "check.log").open("a", encoding="utf-8") as handle:
-            handle.write(text + "\n")
-    except Exception:
-        pass
 
 
 def apply_dark_title_bar(widget) -> None:
@@ -94,6 +79,22 @@ def default_pet_position(pet: PetWindow) -> QPoint:
 
 
 def main() -> int:
+    if "--sandbox-worker" in sys.argv:
+        from core.sandbox_worker import main as sandbox_main
+
+        index = sys.argv.index("--sandbox-worker")
+        plugin_dir = sys.argv[index + 1] if index + 1 < len(sys.argv) else ""
+        return sandbox_main(plugin_dir)
+    setup_logging()
+    if "--check" in sys.argv:
+        config = Config()
+        store = Store(DATA_DIR)
+        try:
+            from core.selfcheck import run_self_check
+
+            return run_self_check(config, store)
+        finally:
+            store.close()
     if sys.platform == "win32":
         try:
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("BiliAsk.Luffy.v5")
@@ -105,7 +106,6 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("B站学习助手")
     app.setQuitOnLastWindowClosed(False)
-    setup_logging()
     apply_theme(app)
     icon_file = APP_DIR / "assets" / "luffy_v3.ico"
     if not icon_file.exists():
@@ -114,8 +114,6 @@ def main() -> int:
         icon_file = APP_DIR / "assets" / "luffy.ico"
     icon = QIcon(str(icon_file)) if icon_file.exists() else make_icon()
     app.setWindowIcon(icon)
-
-    check_mode = "--check" in sys.argv
 
     # ---------------------------------------------------------- 单实例
     probe = QLocalSocket()
@@ -173,16 +171,7 @@ def main() -> int:
     act_quit = menu.addAction("退出")
 
     events: queue.Queue = queue.Queue()
-    hotkeys = HotkeyManager(
-        {
-            1: (MOD_CONTROL | MOD_ALT, VK_Q, "Ctrl+Alt+Q"),
-            2: (MOD_CONTROL | MOD_ALT, VK_H, "Ctrl+Alt+H"),
-            3: (MOD_CONTROL | MOD_ALT, VK_S, "Ctrl+Alt+S"),
-            4: (MOD_CONTROL | MOD_ALT, VK_X, "Ctrl+Alt+X"),
-            5: (MOD_CONTROL | MOD_ALT, VK_A, "Ctrl+Alt+A"),
-        },
-        events.put,
-    )
+    hotkeys = HotkeyManager(DEFAULT_BINDINGS, events.put)
 
     def show_main() -> None:
         main_window.show_and_raise()
@@ -223,6 +212,7 @@ def main() -> int:
         server.close()
         pet.hide()
         tray.hide()
+        plugin_manager.close()
         store.close()
         bridge.stop()
         app.quit()
@@ -308,10 +298,7 @@ def main() -> int:
     controller.settings_changed.connect(on_settings_changed)
 
     pet_enabled = bool(config.data.get("pet_enabled", True))
-    if check_mode:
-        pet.set_enabled(False)
-    else:
-        set_pet_enabled(pet_enabled, save=False)
+    set_pet_enabled(pet_enabled, save=False)
 
     # 把主窗口放到主屏中央，避免系统恢复到一个已经离开屏幕的位置
     screen = QGuiApplication.primaryScreen()
@@ -336,7 +323,7 @@ def main() -> int:
             balloon_shown["value"] = True
             tray.showMessage(
                 "仍在后台运行",
-                "双击桌宠截图提问 · Ctrl+Alt+H 打开主界面 · Ctrl+Alt+A 对话",
+                "双击桌宠截图提问 · Ctrl+Alt+H 打开主界面 · Ctrl+Alt+Shift+A 对话",
                 QSystemTrayIcon.Information,
                 3000,
             )
@@ -383,14 +370,21 @@ def main() -> int:
                     show_chat()
             elif kind == "hotkeys_ready":
                 LOGGER.info("全局热键注册成功")
-                if check_mode:
-                    _check_output("HOTKEY_OK")
+            elif kind == "hotkey_fallback":
+                old_name = event[1] if len(event) > 1 else "热键"
+                new_name = event[2] if len(event) > 2 else "备用热键"
+                LOGGER.warning("热键 %s 被占用，已启用备用 %s", old_name, new_name)
+                if tray.isVisible():
+                    tray.showMessage(
+                        "热键已自动切换",
+                        f"{old_name} 被占用，已改用 {new_name}。",
+                        QSystemTrayIcon.Information,
+                        4000,
+                    )
             elif kind == "hotkey_error":
                 name = event[1] if len(event) > 1 else "热键"
                 LOGGER.error("热键注册失败: %s", name)
-                if check_mode:
-                    _check_output("HOTKEY_FAIL")
-                elif tray.isVisible():
+                if tray.isVisible():
                     tray.showMessage(
                         "热键被占用",
                         f"{name} 被其他程序占用，可用托盘菜单或主界面按钮。",
@@ -403,15 +397,11 @@ def main() -> int:
     poll_timer.start(80)
     hotkeys.start()
 
-    if check_mode:
-        QTimer.singleShot(1600, quit_app)
-        LOGGER.info("自检模式启动")
-    else:
-        main_window.show_and_raise()
-        QTimer.singleShot(120, lambda: apply_dark_title_bar(main_window))
-        LOGGER.info("启动完成")
-        if not config.api_key:
-            QTimer.singleShot(600, controller.open_settings)
+    main_window.show_and_raise()
+    QTimer.singleShot(120, lambda: apply_dark_title_bar(main_window))
+    LOGGER.info("启动完成")
+    if not config.api_key:
+        QTimer.singleShot(600, controller.open_settings)
 
     code = app.exec()
     try:

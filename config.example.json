@@ -26,5 +26,10 @@
   "http_retries": 2,
   "http_backoff": 1.0,
   "bridge_port": 8765,
-  "telemetry_enabled": true
+  "telemetry_enabled": true,
+  "plugin_sandbox": true,
+  "plugin_timeout": 12,
+  "ann_threshold": 128,
+  "ann_bits": 8,
+  "ann_tables": 4
 }

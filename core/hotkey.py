@@ -24,6 +24,14 @@ VK_H = 0x48
 VK_X = 0x58
 VK_A = 0x41
 
+DEFAULT_BINDINGS = {
+    1: (MOD_CONTROL | MOD_ALT, VK_Q, "Ctrl+Alt+Q"),
+    2: (MOD_CONTROL | MOD_ALT, VK_H, "Ctrl+Alt+H"),
+    3: (MOD_CONTROL | MOD_ALT, VK_S, "Ctrl+Alt+S"),
+    4: (MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_X, "Ctrl+Alt+Shift+X"),
+    5: (MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_A, "Ctrl+Alt+Shift+A"),
+}
+
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -50,12 +58,22 @@ class HotkeyManager(threading.Thread):
     def run(self) -> None:
         self._thread_id = _kernel32.GetCurrentThreadId()
         for hotkey_id, (mods, vk, name) in self.bindings.items():
-            if not _user32.RegisterHotKey(None, hotkey_id, mods | MOD_NOREPEAT, vk):
+            candidates = [(mods, name)]
+            if not (mods & MOD_SHIFT):
+                alt_name = name.replace("Ctrl+Alt+", "Ctrl+Alt+Shift+")
+                candidates.append((mods | MOD_SHIFT, alt_name))
+            registered = False
+            for candidate_mods, candidate_name in candidates:
+                if _user32.RegisterHotKey(None, hotkey_id, candidate_mods | MOD_NOREPEAT, vk):
+                    self._registered.append(hotkey_id)
+                    if candidate_name != name:
+                        self.bindings[hotkey_id] = (candidate_mods, vk, candidate_name)
+                        self.notify(("hotkey_fallback", name, candidate_name))
+                    registered = True
+                    break
                 err = ctypes.get_last_error()
-                self._unregister_all()
+            if not registered:
                 self.notify(("hotkey_error", name, err))
-                return
-            self._registered.append(hotkey_id)
         self.notify(("hotkeys_ready",))
 
         msg = wintypes.MSG()

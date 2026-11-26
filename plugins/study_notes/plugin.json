@@ -3,5 +3,6 @@
   "version": "0.1.0",
   "description": "把 Agent 整理的学习笔记追加到本地文件",
   "author": "bili-ask",
-  "entry": "tool.py"
+  "entry": "tool.py",
+  "permissions": ["fs.read", "fs.write"]
 }

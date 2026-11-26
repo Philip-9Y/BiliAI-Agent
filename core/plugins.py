@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from core.config import APP_DIR, DATA_DIR, Config
-from core.tools import ToolRegistry
+from core.sandbox import PluginSandbox
+from core.tools import ToolRegistry, ToolSpec
 
 BUILTIN_DIR = APP_DIR / "plugins"
 USER_DIR = DATA_DIR / "plugins"
@@ -31,6 +32,8 @@ class PluginInfo:
     loaded: bool = False
     error: str = ""
     tools: list[str] = field(default_factory=list)
+    permissions: list[str] = field(default_factory=list)
+    sandbox: object | None = field(default=None, repr=False)
 
 
 class _RegistryProxy:
@@ -56,6 +59,11 @@ class PluginManager:
     def load_all(self) -> list[PluginInfo]:
         for info in list(self.plugins.values()):
             self.registry.unregister_source(info.name)
+            if info.sandbox is not None:
+                try:
+                    info.sandbox.close()
+                except Exception:  # noqa: BLE001
+                    pass
         self.plugins.clear()
         for root, builtin in ((BUILTIN_DIR, True), (USER_DIR, False)):
             if not root.exists():
@@ -71,6 +79,16 @@ class PluginManager:
 
     def list_plugins(self) -> list[PluginInfo]:
         return sorted(self.plugins.values(), key=lambda item: (not item.builtin, item.name))
+
+    def close(self) -> None:
+        for info in list(self.plugins.values()):
+            self.registry.unregister_source(info.name)
+            if info.sandbox is not None:
+                try:
+                    info.sandbox.close()
+                except Exception:  # noqa: BLE001
+                    pass
+        self.plugins.clear()
 
     def set_enabled(self, name: str, enabled: bool) -> None:
         info = self.plugins.get(name)
@@ -122,6 +140,11 @@ class PluginManager:
         if info is None or info.builtin or info.path is None:
             raise ValueError("内置插件不能卸载")
         self.registry.unregister_source(name)
+        if info.sandbox is not None:
+            try:
+                info.sandbox.close()
+            except Exception:  # noqa: BLE001
+                pass
         self.plugins.pop(name, None)
         if info.path.exists():
             shutil.rmtree(info.path, ignore_errors=True)
@@ -155,6 +178,7 @@ class PluginManager:
             path=folder,
             builtin=builtin,
             enabled=enabled,
+            permissions=[str(item) for item in (metadata.get("permissions") or [])],
         )
         if not enabled:
             return info
@@ -162,6 +186,34 @@ class PluginManager:
         if not entry.exists():
             info.error = f"入口文件不存在：{entry.name}"
             return info
+
+        # 所有插件默认独立进程运行；内置插件也走沙箱，只是不可卸载
+        if bool(self.config.data.get("plugin_sandbox", True)):
+            try:
+                sandbox = PluginSandbox(folder, timeout=float(self.config.data.get("plugin_timeout", 12)))
+                specs = sandbox.start()
+                for item in specs:
+                    tool_name = str(item.get("name") or "")
+                    if not tool_name:
+                        continue
+                    self.registry.register(
+                        ToolSpec(
+                            name=tool_name,
+                            description=str(item.get("description") or ""),
+                            parameters=item.get("parameters") or {"type": "object", "properties": {}},
+                            func=lambda _name=tool_name, _sandbox=sandbox, **kwargs: _sandbox.call(_name, kwargs),
+                            dangerous=bool(item.get("dangerous")),
+                        ),
+                        source=name,
+                    )
+                    info.tools.append(tool_name)
+                info.sandbox = sandbox
+                info.loaded = True
+                return info
+            except Exception as exc:  # noqa: BLE001
+                info.error = f"沙箱加载失败：{type(exc).__name__}: {exc}"
+                return info
+
         try:
             module_name = f"biliask_plugin_{name}_{uuid.uuid4().hex[:6]}"
             spec = importlib.util.spec_from_file_location(module_name, entry)

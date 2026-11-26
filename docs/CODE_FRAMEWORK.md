@@ -339,3 +339,19 @@ data/plugins/*/tool.py 用户安装插件
 ## 15. 一句话记住
 
 **MainWindow 是脸，Controller 是流程，ConversationAgent 是大脑，ToolRegistry 是手脚，Store 是记忆，Signal 是神经。**
+
+---
+
+## 2026-11 新增能力（与 README 同步）
+
+- 无 GUI 自检：`python app.py --check` → `data/selfcheck.json`
+- 用户/内置插件进程沙箱：`core/sandbox.py`、`core/sandbox_worker.py`
+- ANN 记忆召回：`core/ann.py`（随机超平面 LSH，阈值 `ann_threshold`）
+- 退出热键：`Ctrl+Alt+Shift+X`
+- 浏览器桥：`core/bridge.py` + `extension/`
+- 本地/云端路由：`core/model_router.py`、`core/local_llm.py`
+- 可观测性：`core/telemetry.py`、`data/metrics.jsonl`
+- 代码签名：`scripts/sign_windows.ps1`
+- 算法说明：`docs/ALGORITHMS.md`
+- 改进清单：`docs/IMPROVEMENTS.md`
+

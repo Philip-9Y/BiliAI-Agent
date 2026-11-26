@@ -285,7 +285,7 @@ app.py
   `Config → Store → ContextWatcher → ToolRegistry → PluginManager → MemoryManager → ConversationAgent → MainWindow → Controller → PetWindow → Tray → HotkeyManager`；
 - 主窗口居中，避免恢复到一个已离开屏幕的位置；
 - 热键：`Q 截图 / A 对话 / H 主界面 / S 设置 / X 退出`；
-- 关闭窗口 = 隐藏到托盘；退出走托盘/`Ctrl+Alt+X`，`shutdown()` 停 Agent、热键、托盘、DB。
+- 关闭窗口 = 隐藏到托盘；退出走托盘/`Ctrl+Alt+Shift+X`，`shutdown()` 停 Agent、热键、托盘、DB。
 
 ### 6.2 core/controller.py：业务编排
 
@@ -524,3 +524,19 @@ python -m unittest discover -s tests -t .
 **App 是壳，Controller 是流程，ConversationAgent 是大脑，ToolRegistry 是手脚，Store 是记忆，Qt 信号槽把线程和界面接起来。**
 
 理解这五者的边界，这个项目就掌握了。
+
+---
+
+## 2026-11 新增能力（与 README 同步）
+
+- 无 GUI 自检：`python app.py --check` → `data/selfcheck.json`
+- 用户/内置插件进程沙箱：`core/sandbox.py`、`core/sandbox_worker.py`
+- ANN 记忆召回：`core/ann.py`（随机超平面 LSH，阈值 `ann_threshold`）
+- 退出热键：`Ctrl+Alt+Shift+X`
+- 浏览器桥：`core/bridge.py` + `extension/`
+- 本地/云端路由：`core/model_router.py`、`core/local_llm.py`
+- 可观测性：`core/telemetry.py`、`data/metrics.jsonl`
+- 代码签名：`scripts/sign_windows.ps1`
+- 算法说明：`docs/ALGORITHMS.md`
+- 改进清单：`docs/IMPROVEMENTS.md`
+

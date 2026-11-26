@@ -45,6 +45,11 @@ DEFAULTS = {
     "http_retries": 2,
     "http_backoff": 1.0,
     "telemetry_enabled": True,
+    "plugin_sandbox": True,
+    "plugin_timeout": 12,
+    "ann_threshold": 128,
+    "ann_bits": 8,
+    "ann_tables": 4,
     "bridge_port": 8765,
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (

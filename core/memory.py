@@ -16,6 +16,7 @@ from collections import Counter
 
 import numpy as np
 
+from core.ann import LSHIndex
 from core.config import Config
 from core.embeddings import EmbeddingService
 from core.llm import DeepSeekClient
@@ -44,6 +45,8 @@ class MemoryManager:
         self.config = config
         self._llm_factory = llm_factory
         self.embedder = embedder if embedder is not None else EmbeddingService(config)
+        self._ann_index: LSHIndex | None = None
+        self._ann_signature: tuple | None = None
 
     # ------------------------------------------------------------------ 检索
     @staticmethod
@@ -66,6 +69,36 @@ class MemoryManager:
             return []
 
         query_vector, memory_vectors = self._embedding_vectors(query, memories)
+        candidate_ids: set[str] | None = None
+        threshold = int(self.config.data.get("ann_threshold", 128))
+        if (
+            query_vector is not None
+            and len(memory_vectors) >= threshold
+            and len(memory_vectors) > 0
+        ):
+            signature = tuple(
+                sorted(
+                    (
+                        memory["id"],
+                        memory.get("updated_at"),
+                        memory.get("embedding_hash"),
+                    )
+                    for memory in memories
+                    if memory["id"] in memory_vectors
+                )
+            )
+            if self._ann_index is None or signature != self._ann_signature:
+                self._ann_index = LSHIndex(
+                    memory_vectors,
+                    bits=int(self.config.data.get("ann_bits", 8)),
+                    tables=int(self.config.data.get("ann_tables", 4)),
+                )
+                self._ann_signature = signature
+            candidate_ids = self._ann_index.query(query_vector)
+        elif self._ann_index is not None:
+            self._ann_index = None
+            self._ann_signature = None
+
         scored: list[tuple[float, str, dict]] = []
         for memory in memories:
             memory_grams = self._grams(memory["content"] + " " + memory["tags"])
@@ -73,7 +106,11 @@ class MemoryManager:
             similarity = self._cosine(question_grams, memory_grams)
             semantic = 0.0
             vector = memory_vectors.get(memory["id"])
-            if query_vector is not None and vector is not None:
+            if (
+                query_vector is not None
+                and vector is not None
+                and (candidate_ids is None or memory["id"] in candidate_ids)
+            ):
                 semantic = self._array_cosine(query_vector, vector)
             # 关键词/字符相似度 + 语义向量混合；模型缺失时 semantic=0，自动回退
             if overlap == 0 and similarity < 0.18 and semantic < 0.38:

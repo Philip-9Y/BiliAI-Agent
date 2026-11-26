@@ -48,6 +48,7 @@ class MemoryTest(unittest.TestCase):
         self.config = Config(path=self.tmp_path / "config.json")
         self.config.data["api_key"] = "sk-test"
         self.config.data["embedding_enabled"] = False
+        self.config.data["ann_threshold"] = 2
 
     def tearDown(self) -> None:
         self.store.close()

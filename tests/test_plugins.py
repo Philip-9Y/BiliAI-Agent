@@ -57,6 +57,7 @@ class PluginTest(unittest.TestCase):
         self.manager = PluginManager(self.config, self.registry)
 
     def tearDown(self) -> None:
+        self.manager.close()
         plugins_module.BUILTIN_DIR = self._old_builtin
         plugins_module.USER_DIR = self._old_user
         self.tmp.cleanup()
@@ -91,6 +92,9 @@ class PluginTest(unittest.TestCase):
         info = self.manager.install_from_folder(source)
         self.assertTrue(info.loaded)
         self.assertIn("demo_hello2", self.registry.names())
+        result = self.registry.execute("demo_hello2", {})
+        self.assertTrue(result.ok, result.content)
+        self.assertEqual(result.content, "hello from another plugin")
         self.assertTrue((self.user / "another-plugin").exists())
 
         self.manager.uninstall("another-plugin")

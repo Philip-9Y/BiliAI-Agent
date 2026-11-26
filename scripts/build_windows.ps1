@@ -29,6 +29,7 @@ $pyiArgs = @(
   "--collect-submodules", "markdown",
   "--collect-submodules", "pygments",
   "--collect-submodules", "win32com",
+  "--hidden-import", "core.sandbox_worker",
   "--exclude-module", "PyQt5",
   "--exclude-module", "PyQt6",
   "--exclude-module", "PySide2",
@@ -60,6 +61,21 @@ $pyiArgs += "app.py"
 & python @pyiArgs
 
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+
+Write-Host "== 构建插件沙箱 worker =="
+python -m PyInstaller `
+  --noconfirm --clean --onedir --console `
+  --name "Study-AI-Sandbox" `
+  --exclude-module PyQt5 `
+  --exclude-module PyQt6 `
+  --exclude-module PySide2 `
+  --exclude-module PySide6 `
+  core\sandbox_worker.py
+if ($LASTEXITCODE -ne 0) { throw "Sandbox worker build failed" }
+if (Test-Path "dist\Study-AI") {
+  if (Test-Path "dist\Study-AI\sandbox") { Remove-Item "dist\Study-AI\sandbox" -Recurse -Force }
+  Copy-Item "dist\Study-AI-Sandbox" "dist\Study-AI\sandbox" -Recurse -Force
+}
 
 Write-Host "== 复制本地模型和浏览器扩展 =="
 if (Test-Path "models") {

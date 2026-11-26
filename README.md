@@ -141,6 +141,48 @@ Agent 会自动调用：
 - **聊天顶部「自动路由」按钮可直接点击切换**：模式、本地模型、云端模型，保存后即时生效
 - 顶部模型标签会显示「自动路由 / 本地优先 / 云端」
 
+## 自检、沙箱、ANN 与签名
+
+### 无 GUI 自检
+
+```powershell
+python app.py --check
+```
+
+- 不启动 Qt、不弹窗
+- 检查 SQLite、API Key、本地 BGE、扩展、桥端口、Ollama、全局热键
+- 结果写入 `data/selfcheck.json`
+- 核心通过返回 0；热键被占用只记 warning
+
+### 插件沙箱
+
+- 用户插件和内置插件默认在独立子进程运行
+- 主进程只通过 JSON RPC 调用，单次调用默认 12 秒超时
+- 子进程清除 API Key/Token 等敏感环境变量
+- 工作目录固定为插件目录
+- 这是**进程级沙箱**；Windows 下没有内核级文件/网络隔离
+- 打包版需要 `Study-AI-Sandbox.exe`，构建脚本会自动生成
+
+### ANN 记忆索引
+
+- 默认 `ann_threshold=128`
+- 记忆少于 128 条：线性精确余弦
+- 超过 128 条：随机超平面 LSH 召回候选，再做精确余弦
+- 关键词命中仍然独立保留，避免 ANN 漏召回
+- 配置：`ann_threshold`、`ann_bits`、`ann_tables`
+
+### 代码签名
+
+```powershell
+# 已有受信任 PFX
+powershell -ExecutionPolicy Bypass -File scripts/sign_windows.ps1 -PfxPath "C:\keys\study-ai.pfx" -PfxPassword "..."
+
+# 开发自签名（仅验证流程，SmartScreen 仍会警告）
+powershell -ExecutionPolicy Bypass -File scripts/sign_windows.ps1 -CreateSelfSigned -SkipTimestamp
+```
+
+生产分发请使用受信任的 OV/EV 代码签名证书。
+
 ## 快速开始
 
 ```powershell
@@ -157,12 +199,12 @@ python app.py
 | 热键 | 作用 |
 | --- | --- |
 | `Ctrl+Alt+Q` | 截图提问 |
-| `Ctrl+Alt+A` | 打开对话并聚焦输入框 |
+| `Ctrl+Alt+Shift+A` | 打开对话并聚焦输入框 |
 | `Ctrl+Alt+H` | 打开主界面 |
 | `Ctrl+Alt+S` | 设置 |
-| `Ctrl+Alt+X` | 退出 |
+| `Ctrl+Alt+Shift+X` | 退出 |
 
-关闭主窗口 = 最小化到托盘；退出用托盘菜单或 `Ctrl+Alt+X`。
+关闭主窗口 = 最小化到托盘；退出用托盘菜单或 `Ctrl+Alt+Shift+X`。
 
 ## 桌宠
 
@@ -229,6 +271,8 @@ python tests/render_screenshots.py
 - [架构说明](docs/ARCHITECTURE.md)：进程/线程模型、模块职责、数据流、数据库、扩展点
 - [源码阅读指南](docs/READING_GUIDE.md)：阅读顺序、断点/调试、三条调用链、练习任务
 - [系统学习路线](docs/LEARNING_PATH.md)：8 周计划、底层知识地图、官方文档与实验
+- [算法与数据结构](docs/ALGORITHMS.md)：贪心、DP、分治、回溯、LSH、余弦、缓存
+- [改进清单](docs/IMPROVEMENTS.md)：每次改动的功能、作用和验证
 
 ## 下一步（按优先级）
 
