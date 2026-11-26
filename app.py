@@ -345,6 +345,8 @@ def main() -> int:
                 show_main()
 
         connection.readyRead.connect(handle)
+        # 短连接可能已经把 show 写进缓冲区，readyRead 不会再次触发；补一次读取
+        QTimer.singleShot(50, handle)
 
     server.newConnection.connect(on_new_connection)
 
