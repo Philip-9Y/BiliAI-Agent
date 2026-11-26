@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_at TEXT NOT NULL,
     question TEXT NOT NULL,
     image_path TEXT,
-    model TEXT
+    model TEXT,
+    context TEXT,
+    summary TEXT,
+    summary_upto INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,6 +86,12 @@ class Store:
         session_columns = [row[1] for row in self._conn.execute("PRAGMA table_info(sessions)")]
         if "context" not in session_columns:
             self._conn.execute("ALTER TABLE sessions ADD COLUMN context TEXT")
+        if "summary" not in session_columns:
+            self._conn.execute("ALTER TABLE sessions ADD COLUMN summary TEXT")
+        if "summary_upto" not in session_columns:
+            self._conn.execute(
+                "ALTER TABLE sessions ADD COLUMN summary_upto INTEGER DEFAULT 0"
+            )
         message_columns = [row[1] for row in self._conn.execute("PRAGMA table_info(messages)")]
         if "meta" not in message_columns:
             self._conn.execute("ALTER TABLE messages ADD COLUMN meta TEXT")
@@ -134,6 +143,13 @@ class Store:
             self._conn.execute(
                 "UPDATE sessions SET context = ? WHERE id = ?",
                 (context, sid),
+            )
+
+    def update_session_summary(self, sid: str, summary: str, upto: int) -> None:
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE sessions SET summary = ?, summary_upto = ? WHERE id = ?",
+                (summary, int(upto), sid),
             )
 
     def list_sessions(self, query: str = "", limit: int = 300) -> list[dict]:

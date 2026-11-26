@@ -117,6 +117,17 @@ class SettingsDialog(QDialog):
         self.query_rewrite.setToolTip("例如把“这个为什么”结合上一轮改写成完整问题，只影响长期记忆检索。")
         form.addRow("", self.query_rewrite)
 
+        self.summary_enabled = QCheckBox("长对话自动摘要（历史过长时压缩较早消息）")
+        self.summary_enabled.setChecked(bool(config.data.get("summary_enabled", True)))
+        self.summary_enabled.setToolTip("超过字符阈值后，把较早消息压缩成摘要；只保留最近若干条原文。")
+        form.addRow("", self.summary_enabled)
+
+        self.history_limit = QSpinBox()
+        self.history_limit.setRange(8000, 60000)
+        self.history_limit.setSingleStep(2000)
+        self.history_limit.setValue(int(config.data.get("history_char_limit", 18000)))
+        form.addRow("摘要阈值（字符）", self.history_limit)
+
         self.note_template = QTextEdit()
         self.note_template.setPlainText(config.note_template)
         self.note_template.setFixedHeight(130)
@@ -215,6 +226,8 @@ class SettingsDialog(QDialog):
         self.config.data["thinking"] = bool(self.thinking.isChecked())
         self.config.data["auto_memory"] = bool(self.auto_memory.isChecked())
         self.config.data["query_rewrite"] = bool(self.query_rewrite.isChecked())
+        self.config.data["summary_enabled"] = bool(self.summary_enabled.isChecked())
+        self.config.data["history_char_limit"] = int(self.history_limit.value())
         self.config.data["note_template"] = self.note_template.toPlainText().strip()
         self.config.save()
         self.accept()

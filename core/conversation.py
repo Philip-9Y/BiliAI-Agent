@@ -110,9 +110,69 @@ class ConversationAgent(QObject):
             temperature=float(self.config.data.get("temperature", 0.6)),
         )
 
+    def _prepare_history(self, sid: str, session: dict, rows: list[dict], client):
+        """历史过长时，把较早消息压缩成摘要，只保留最近若干条。"""
+        summary = (session.get("summary") or "").strip()
+        if not bool(self.config.data.get("summary_enabled", True)):
+            return rows, summary
+        limit = int(self.config.data.get("history_char_limit", 18000))
+        keep = max(4, int(self.config.data.get("history_keep_messages", 12)))
+        if client is None or len(rows) <= keep:
+            return rows, summary
+        total_chars = sum(len(row["content"] or "") for row in rows)
+        if total_chars <= limit:
+            return rows, summary
+
+        recent = rows[-keep:]
+        cutoff = int(recent[0]["id"])
+        upto = int(session.get("summary_upto") or 0)
+        old_rows = [
+            row for row in rows if upto < int(row["id"]) < cutoff
+        ]
+        if old_rows:
+            new_summary = self._summarize_history(client, summary, old_rows)
+            if new_summary:
+                summary = new_summary
+                self.store.update_session_summary(sid, summary, cutoff - 1)
+        return recent, summary
+
+    def _summarize_history(self, client, existing: str, old_rows: list[dict]) -> str | None:
+        lines: list[str] = []
+        used = 0
+        for row in old_rows[-24:]:
+            role = "用户" if row["role"] == "user" else "助手"
+            text = (row["content"] or "")[:500]
+            lines.append(f"{role}：{text}")
+            used += len(text)
+            if used >= 8000:
+                break
+        prompt = (
+            "把下面的较早对话压缩成不超过 400 字的学习摘要，保留：关键问题、结论、"
+            "公式/定义、未完成事项。不要编造。只输出摘要。\n"
+        )
+        if existing:
+            prompt += f"\n已有摘要（可合并）：\n{existing[:800]}\n"
+        prompt += "\n较早对话：\n" + "\n".join(lines)
+        try:
+            summary = client.chat(
+                [
+                    {"role": "system", "content": "你是对话摘要器，只输出简洁摘要。"},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=600,
+                temperature=0.2,
+            ).strip()
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("长对话摘要失败")
+            return None
+        if not summary:
+            return None
+        return summary[:2000]
+
     def _build_messages(self, sid: str, client=None) -> list[dict]:
         session = self.store.get_session(sid) or {}
-        rows = self.store.get_messages(sid)
+        raw_rows = self.store.get_messages(sid)
+        rows, history_summary = self._prepare_history(sid, session, raw_rows, client)
         user_texts = [row["content"] for row in rows if row["role"] == "user"]
         question = user_texts[-1] if user_texts else ""
         # 模糊追问（这个/刚才/继续）时，把最近几轮问题也作为记忆检索上下文
@@ -123,6 +183,8 @@ class ConversationAgent(QObject):
         context_text = (session.get("context") or "").strip()
         if context_text:
             system += "\n\n【当前屏幕上下文】\n" + context_text
+        if history_summary:
+            system += "\n\n【较早对话摘要】\n" + history_summary
         if self.memory is not None and retrieval_question:
             memory_text = self.memory.build_context(retrieval_question, prior_questions)
             if memory_text:
@@ -138,14 +200,15 @@ class ConversationAgent(QObject):
 
         messages: list[dict] = [{"role": "system", "content": system}]
         image_cache: dict[str, str] = {}
-        first_user = True
+        first_user_id = next(
+            (row["id"] for row in rows if row["role"] == "user"), None
+        )
         for row in rows:
             if row["role"] == "user":
                 # 每一条用户消息都可能带自己的截图；这样同一会话连续截图不会丢历史
                 image_rel = row.get("image_path") or (
-                    session.get("image_path") if first_user else None
+                    session.get("image_path") if row["id"] == first_user_id else None
                 )
-                first_user = False
                 image_b64: str | None = None
                 if image_rel:
                     image_path = self.store.image_abspath(image_rel)

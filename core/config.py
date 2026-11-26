@@ -23,6 +23,9 @@ DEFAULTS = {
     "thinking": False,
     "auto_memory": True,
     "query_rewrite": True,
+    "summary_enabled": True,
+    "history_char_limit": 18000,
+    "history_keep_messages": 12,
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (
         "## 来源\n\n## 核心结论\n\n## 关键公式 / 推导\n\n"

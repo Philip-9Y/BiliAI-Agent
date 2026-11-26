@@ -96,7 +96,7 @@ Study-AI/
 │   ├── agent_pane.py          # 旧 Agent 任务页（新 UI 不用）
 │   └── answer_panel.py        # 旧浮动回答面板（新 UI 不用）
 ├── plugins/study_notes/       # 内置示例插件
-├── tests/                     # 55 项单元 + 流程测试
+├── tests/                     # 56 项单元 + 流程测试
 ├── assets/                    # 图标、截图
 ├── data/                      # 运行时数据（gitignore）
 ├── config.json                # 配置（gitignore，含 API Key）
@@ -372,6 +372,7 @@ ToolSpec(
 - `consolidate(session_ids)`：让 LLM 输出 JSON 记忆，与旧记忆相似合并；
 - `auto_memory`：每段对话每增加 6 条消息，后台自动整理一次（设置可关）；
 - `query_rewrite`：模糊追问先改写成完整问题，再检索记忆；
+- `summary`：历史超过 `history_char_limit` 时，用 LLM 压缩较早消息并只保留最近 `history_keep_messages` 条。
 - 记忆默认启用，可手动停用/编辑/删除。
 
 关键词检索 ≠ 向量检索；当前没有 embedding。后续可以替换为向量库，但接口（`build_context`）不用变。

@@ -236,6 +236,21 @@ class FlowTest(unittest.TestCase):
         self.assertIn("量子计算", messages[0]["content"])
         self.assertIn("这个为什么", client.prompt)
 
+    def test_long_history_is_summarized(self) -> None:
+        sid = self.store.create_session("长会话")
+        for index in range(30):
+            role = "user" if index % 2 == 0 else "assistant"
+            self.store.add_message(sid, role, f"第{index}轮内容 " + "很长的历史内容" * 40)
+        self.config.data["summary_enabled"] = True
+        self.config.data["history_char_limit"] = 1000
+        self.config.data["history_keep_messages"] = 4
+        messages = self.agent._build_messages(
+            sid, client=_RewriteClient("压缩后的旧对话摘要")
+        )
+        self.assertIn("压缩后的旧对话摘要", messages[0]["content"])
+        self.assertLessEqual(len(messages), 5)
+        self.assertIsNotNone(self.store.get_session(sid)["summary"])
+
     def test_context_stored_in_session(self) -> None:
         self.questions[:] = ["这是哪个视频"]
         sid = self._capture()
