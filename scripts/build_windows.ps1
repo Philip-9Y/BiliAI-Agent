@@ -6,7 +6,10 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 Write-Host "== 检查依赖 =="
-python -m pip install --upgrade pyinstaller
+python -m PyInstaller --version *> $null
+if ($LASTEXITCODE -ne 0) {
+  python -m pip install pyinstaller
+}
 
 $icon = "D:\Study-AI.ico"
 $iconArgs = @()

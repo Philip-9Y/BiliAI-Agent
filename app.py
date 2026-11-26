@@ -44,9 +44,27 @@ def setup_logging() -> None:
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     file_handler = logging.FileHandler(DATA_DIR / "app.log", encoding="utf-8")
     file_handler.setFormatter(fmt)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(fmt)
-    logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler])
+    handlers = [file_handler]
+    if sys.stderr is not None:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(fmt)
+        handlers.append(stream_handler)
+    logging.basicConfig(level=logging.INFO, handlers=handlers)
+
+
+def _check_output(text: str) -> None:
+    """--check 输出：windowed exe 没有 stdout，写文件兜底。"""
+    try:
+        if sys.stdout is not None:
+            print(text, flush=True)
+    except Exception:
+        pass
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with (DATA_DIR / "check.log").open("a", encoding="utf-8") as handle:
+            handle.write(text + "\n")
+    except Exception:
+        pass
 
 
 def apply_dark_title_bar(widget) -> None:
@@ -366,12 +384,12 @@ def main() -> int:
             elif kind == "hotkeys_ready":
                 LOGGER.info("全局热键注册成功")
                 if check_mode:
-                    print("HOTKEY_OK", flush=True)
+                    _check_output("HOTKEY_OK")
             elif kind == "hotkey_error":
                 name = event[1] if len(event) > 1 else "热键"
                 LOGGER.error("热键注册失败: %s", name)
                 if check_mode:
-                    print("HOTKEY_FAIL", flush=True)
+                    _check_output("HOTKEY_FAIL")
                 elif tray.isVisible():
                     tray.showMessage(
                         "热键被占用",
