@@ -67,6 +67,7 @@ class ConversationAgent(QObject):
         self.last_route = ""
         self.last_memory_count = 0
         self.last_tool_count = 0
+        self.last_video_source = ""
         self.max_steps = max_steps
         self._runs: dict[str, threading.Event] = {}
         self._stop_events: dict[str, threading.Event] = {}
@@ -206,6 +207,14 @@ class ConversationAgent(QObject):
 
         system = CHAT_SYSTEM_PROMPT
         context_text = (session.get("context") or "").strip()
+        if "【浏览器上下文" in context_text:
+            self.last_video_source = "浏览器扩展（URL/进度/字幕）"
+        elif "【剪贴板视频链接】" in context_text:
+            self.last_video_source = "剪贴板链接"
+        elif context_text:
+            self.last_video_source = "仅窗口标题（无 URL/BV）"
+        else:
+            self.last_video_source = "无视频上下文"
         if context_text:
             system += "\n\n【当前屏幕上下文】\n" + context_text
         if history_summary:
@@ -352,6 +361,7 @@ class ConversationAgent(QObject):
             self._status(sid, steps, f"模型路由：{self._route_label()}")
             messages = self._build_messages(sid, client=client)
             self._status(sid, steps, f"记忆检索：命中 {self.last_memory_count} 条")
+            self._status(sid, steps, f"视频追溯：{self.last_video_source}")
             if task:
                 messages.append({"role": "user", "content": task})
             tools = self.registry.specs()

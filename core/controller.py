@@ -8,12 +8,12 @@ from datetime import datetime
 
 from PIL import Image
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from core.capture import crop_image, grab_primary_screen
 from core.config import DATA_DIR, Config
-from core.context import ContextWatcher, get_foreground_context
+from core.context import ContextWatcher, get_foreground_context, parse_bvid
 from core.conversation import ConversationAgent
 from core.memory import MemoryManager
 from core.store import Store
@@ -200,6 +200,18 @@ class Controller(QObject):
                     parts.append(bridge_text)
             except Exception:  # noqa: BLE001
                 LOGGER.exception("读取浏览器桥上下文失败")
+
+        # 桌面客户端无法被浏览器扩展注入；剪贴板里的 B站链接做兜底
+        has_video_link = any(part.startswith("【浏览器上下文") for part in parts)
+        if not has_video_link:
+            try:
+                clipboard = QGuiApplication.clipboard().text().strip()
+            except Exception:  # noqa: BLE001
+                clipboard = ""
+            if clipboard and len(clipboard) <= 2000 and (
+                parse_bvid(clipboard) or "bilibili.com/video" in clipboard.lower()
+            ):
+                parts.append("【剪贴板视频链接】\n" + clipboard[:800])
         return "\n\n".join(parts)
 
     # ------------------------------------------------------------------ 提交
