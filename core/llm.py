@@ -94,12 +94,22 @@ class DeepSeekClient:
             payload["temperature"] = self.temperature
         return payload
 
-    def chat(self, messages: list[dict]) -> str:
+    def chat(
+        self,
+        messages: list[dict],
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> str:
+        payload = self._payload(messages, stream=False)
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
+        if temperature is not None and not self.thinking:
+            payload["temperature"] = temperature
         try:
             resp = requests.post(
                 self.url,
                 headers=self._headers(),
-                json=self._payload(messages, stream=False),
+                json=payload,
                 timeout=self.timeout,
             )
         except requests.RequestException as exc:

@@ -112,6 +112,11 @@ class SettingsDialog(QDialog):
         self.auto_memory.setToolTip("会额外调用一次模型，可能产生少量 token 费用；可随时关闭。")
         form.addRow("", self.auto_memory)
 
+        self.query_rewrite = QCheckBox("模糊追问时自动改写检索问题（推荐）")
+        self.query_rewrite.setChecked(bool(config.data.get("query_rewrite", True)))
+        self.query_rewrite.setToolTip("例如把“这个为什么”结合上一轮改写成完整问题，只影响长期记忆检索。")
+        form.addRow("", self.query_rewrite)
+
         self.note_template = QTextEdit()
         self.note_template.setPlainText(config.note_template)
         self.note_template.setFixedHeight(130)
@@ -209,6 +214,7 @@ class SettingsDialog(QDialog):
         self.config.data["pet_enabled"] = bool(self.pet_enabled.isChecked())
         self.config.data["thinking"] = bool(self.thinking.isChecked())
         self.config.data["auto_memory"] = bool(self.auto_memory.isChecked())
+        self.config.data["query_rewrite"] = bool(self.query_rewrite.isChecked())
         self.config.data["note_template"] = self.note_template.toPlainText().strip()
         self.config.save()
         self.accept()

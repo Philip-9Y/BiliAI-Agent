@@ -110,20 +110,21 @@ class ConversationAgent(QObject):
             temperature=float(self.config.data.get("temperature", 0.6)),
         )
 
-    def _build_messages(self, sid: str) -> list[dict]:
+    def _build_messages(self, sid: str, client=None) -> list[dict]:
         session = self.store.get_session(sid) or {}
         rows = self.store.get_messages(sid)
         user_texts = [row["content"] for row in rows if row["role"] == "user"]
         question = user_texts[-1] if user_texts else ""
         # 模糊追问（这个/刚才/继续）时，把最近几轮问题也作为记忆检索上下文
         prior_questions = " ".join(user_texts[-3:-1])[:600]
+        retrieval_question = self._rewrite_query(client, question, rows)
 
         system = CHAT_SYSTEM_PROMPT
         context_text = (session.get("context") or "").strip()
         if context_text:
             system += "\n\n【当前屏幕上下文】\n" + context_text
-        if self.memory is not None and question:
-            memory_text = self.memory.build_context(question, prior_questions)
+        if self.memory is not None and retrieval_question:
+            memory_text = self.memory.build_context(retrieval_question, prior_questions)
             if memory_text:
                 system += (
                     "\n\n【用户的长期记忆（可能相关，参考即可；无关就忽略）】\n" + memory_text
@@ -174,12 +175,54 @@ class ConversationAgent(QObject):
                 messages.append({"role": "assistant", "content": row["content"]})
         return messages
 
+    def _rewrite_query(self, client, question: str, rows: list[dict]) -> str:
+        """把“这个/刚才/继续”这类追问改写成可用于记忆检索的完整问题。"""
+        if client is None or not question:
+            return question
+        if not bool(self.config.data.get("query_rewrite", True)):
+            return question
+        if len(rows) < 3:
+            return question
+        markers = ("这个", "那个", "它", "刚才", "上面", "前面", "继续", "这句", "这一步", "为什么")
+        if len(question) > 24 and not any(marker in question for marker in markers):
+            return question
+
+        recent = rows[-7:-1]
+        lines = []
+        for row in recent[-4:]:
+            role = "用户" if row["role"] == "user" else "助手"
+            lines.append(f"{role}：{(row['content'] or '')[:300]}")
+        if not lines:
+            return question
+
+        prompt = (
+            "你是检索问题改写器。根据最近对话，把用户最新问题改写成一个独立、完整、"
+            "适合检索长期记忆的问题。必须保留“这个/刚才/它”指代的对象。"
+            "只输出改写后的问题，不要回答问题，不要解释，不超过 60 字。\n\n"
+            f"最近对话：\n" + "\n".join(lines) + f"\n\n用户最新问题：{question}"
+        )
+        try:
+            rewritten = client.chat(
+                [
+                    {"role": "system", "content": "你只做追问改写，输出一行检索问题。"},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=120,
+                temperature=0.1,
+            ).strip()
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("追问改写失败，使用原问题检索")
+            return question
+        if not rewritten or len(rewritten) > 200:
+            return question
+        return rewritten
+
     def _run(self, sid: str, task: str, stop_event: threading.Event) -> None:
         started = time.time()
         steps: list[dict] = []
         try:
             client = self._make_client()
-            messages = self._build_messages(sid)
+            messages = self._build_messages(sid, client=client)
             if task:
                 messages.append({"role": "user", "content": task})
             tools = self.registry.specs()

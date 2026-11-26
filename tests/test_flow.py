@@ -53,6 +53,16 @@ class _Watcher:
         )
 
 
+class _RewriteClient:
+    def __init__(self, rewritten: str) -> None:
+        self.rewritten = rewritten
+        self.prompt = ""
+
+    def chat(self, messages, max_tokens=None, temperature=None):
+        self.prompt = messages[-1]["content"]
+        return self.rewritten
+
+
 class FlowTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -64,7 +74,13 @@ class FlowTest(unittest.TestCase):
         self.store = Store(self.tmp_path / "data")
         self.config = Config(path=self.tmp_path / "config.json")
         self.config.data.update(
-            {"api_key": "sk-test", "save_captures": True, "thinking": False}
+            {
+                "api_key": "sk-test",
+                "save_captures": True,
+                "thinking": False,
+                "auto_memory": False,
+                "query_rewrite": False,
+            }
         )
         self.main = MainWindow(self.store, self.config)
         self.questions: list[str] = []
@@ -207,6 +223,18 @@ class FlowTest(unittest.TestCase):
         system_prompt = messages[0]["content"]
         self.assertIn("主定理", system_prompt)
         self.assertNotIn("黑底", system_prompt)
+
+    def test_fuzzy_query_rewrite_used_for_memory(self) -> None:
+        sid = self.store.create_session("追问")
+        self.store.add_message(sid, "user", "递归树怎么算")
+        self.store.add_message(sid, "assistant", "用递归树逐层求和")
+        self.store.add_message(sid, "user", "这个为什么")
+        self.store.add_memory("量子计算中的叠加态与测量", "量子")
+        self.config.data["query_rewrite"] = True
+        client = _RewriteClient("量子计算中的叠加态是什么")
+        messages = self.agent._build_messages(sid, client=client)
+        self.assertIn("量子计算", messages[0]["content"])
+        self.assertIn("这个为什么", client.prompt)
 
     def test_context_stored_in_session(self) -> None:
         self.questions[:] = ["这是哪个视频"]

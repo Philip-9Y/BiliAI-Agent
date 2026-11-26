@@ -22,6 +22,7 @@ DEFAULTS = {
     "save_captures": True,
     "thinking": False,
     "auto_memory": True,
+    "query_rewrite": True,
     "hotkey_capture": "Ctrl+Alt+Q",
     "note_template": (
         "## 来源\n\n## 核心结论\n\n## 关键公式 / 推导\n\n"

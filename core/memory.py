@@ -141,7 +141,7 @@ class MemoryManager:
             if not session or not messages:
                 continue
             lines = [f"# 记录：{session['question'][:60]}"]
-            for message in messages[:6]:
+            for message in messages[-6:]:
                 role = "问" if message["role"] == "user" else "答"
                 lines.append(f"{role}：{message['content'][:200]}")
             conversations.append("\n".join(lines))

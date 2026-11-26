@@ -63,7 +63,7 @@ class Controller(QObject):
         self._restore_main = False
         self._consolidating = False
         self._auto_memory_running = False
-        self._auto_memory_sessions: set[str] = set()
+        self._auto_memory_counts: dict[str, int] = {}
 
         self.main.capture_requested.connect(self.start_capture)
         self.main.settings_requested.connect(self.open_settings)
@@ -263,13 +263,14 @@ class Controller(QObject):
             return
         if self._consolidating or self._auto_memory_running:
             return
-        if sid in self._auto_memory_sessions:
-            return
         messages = self.store.get_messages(sid)
         if len(messages) < 6:
             return
+        last_count = self._auto_memory_counts.get(sid, 0)
+        if len(messages) - last_count < 6:
+            return
 
-        self._auto_memory_sessions.add(sid)
+        self._auto_memory_counts[sid] = len(messages)
         self._auto_memory_running = True
         self.memory_status.emit("正在自动整理长期记忆…")
 
